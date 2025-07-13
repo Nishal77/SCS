@@ -3,12 +3,12 @@ import { Star, Plus, ArrowLeft, ArrowRight } from 'lucide-react';
 
 // --- Mock Data ---
 const foodItems = [
-    { name: 'Burger King', image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=2072&auto=format&fit=crop', offer: 'ITEMS AT ₹159', rating: 4.6, deliveryTime: '30-35 mins', cuisine: 'Burgers, American', price: 159, },
-    { name: 'Subway', image: 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?q=80&w=1964&auto=format&fit=crop', offer: '₹150 OFF ABOVE ₹299', rating: 4.5, deliveryTime: '25-30 mins', cuisine: 'Salads, Sandwiches', price: 249, },
-    { name: 'The Dosa Palace', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop', offer: '30% OFF UPTO ₹75', rating: 4.7, deliveryTime: '25-30 mins', cuisine: 'South Indian, Snacks', price: 120, },
-    { name: 'Pizza Central', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=1981&auto=format&fit=crop', offer: 'ITEMS AT ₹199', rating: 4.4, deliveryTime: '30-35 mins', cuisine: 'Pizza, Italian, Fast Food', price: 199, },
-    { name: 'Kebabsville', image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?q=80&w=1974&auto=format&fit=crop', offer: '50% OFF UPTO ₹100', rating: 4.8, deliveryTime: '35-40 mins', cuisine: 'Kebab, North Indian', price: 350, },
-    { name: 'Biryani House', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop', offer: 'COMBO AT ₹299', rating: 4.9, deliveryTime: '25-30 mins', cuisine: 'Biryani, Hyderabadi', price: 299, },
+    { name: 'Burger King', image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=2072&auto=format&fit=crop', rating: 4.6, deliveryTime: '30-35 mins', cuisine: 'Burgers, American', price: 159, },
+    { name: 'Subway', image: 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?q=80&w=1964&auto=format&fit=crop', rating: 4.5, deliveryTime: '25-30 mins', cuisine: 'Salads, Sandwiches', price: 249, },
+    { name: 'The Dosa Palace', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop', rating: 4.7, deliveryTime: '25-30 mins', cuisine: 'South Indian, Snacks', price: 120, },
+    { name: 'Pizza Central', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=1981&auto=format&fit=crop', rating: 4.4, deliveryTime: '30-35 mins', cuisine: 'Pizza, Italian, Fast Food', price: 199, },
+    { name: 'Kebabsville', image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '35-40 mins', cuisine: 'Kebab, North Indian', price: 350, },
+    { name: 'Biryani House', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop', rating: 4.9, deliveryTime: '25-30 mins', cuisine: 'Biryani, Hyderabadi', price: 299, },
 ];
 
 // --- Food Item Card Component (Updated with smaller size) ---
@@ -22,7 +22,7 @@ const FoodItemCard = ({ item }) => (
                 onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/288x176/F3F4F6/9CA3AF?text=Image+Not+Found'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-            <p className="absolute bottom-3 left-4 text-white text-xl font-extrabold tracking-wider drop-shadow-lg">{item.offer}</p>
+            {/* Offer removed */}
         </div>
         <div className="p-4">
             <h3 className="text-lg font-bold text-gray-900 truncate">{item.name}</h3>
@@ -117,7 +117,7 @@ const TodaysSpecial = () => {
   return (
     <div className="font-sans">
       <div className="container mx-auto">
-        <FoodCarousel title="Today's Hottest Deals">
+        <FoodCarousel title="Hot Picks of the Day">
             {foodItems.map((item) => (
                 <FoodItemCard key={item.name} item={item} />
             ))}

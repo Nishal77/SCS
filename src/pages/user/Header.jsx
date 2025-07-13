@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, ShoppingCart, ChevronDown, Menu, X, LogIn } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from 'react-router-dom';
 
 // Custom Hook to fetch user's location (city)
 const useLocation = () => {
@@ -92,11 +94,11 @@ const Header = () => {
 
     // Reusable Logo Component
     const Logo = () => (
-        <div className="relative flex items-center justify-center w-24 h-16">
-            <span className="absolute top-0 text-[10px] font-bold text-gray-500 tracking-widest uppercase">ORGANIC</span>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter">.MITE.</h1>
-            <span className="absolute bottom-0 text-[10px] font-bold text-gray-500 tracking-widest uppercase">EAT</span>
-        </div>
+        <Link to="/user/dashboard" className="relative flex items-center justify-center w-24 h-16 group cursor-pointer">
+            <span className="absolute top-0 text-[10px] font-bold text-gray-500 tracking-widest uppercase group-hover:text-amber-500 transition-colors">moodbidri</span>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tighter group-hover:text-amber-500 transition-colors">.MITE.</h1>
+            <span className="absolute bottom-0 text-[10px] font-bold text-gray-500 tracking-widest uppercase group-hover:text-amber-500 transition-colors">EAT</span>
+        </Link>
     );
 
     // Reusable NavLink components for different contexts
@@ -110,11 +112,14 @@ const Header = () => {
     );
 
     const ProfileLink = ({ compact = false }) => (
-         <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors px-2 py-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-xs font-bold text-gray-600">S</span>
+        <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors px-2 py-2">
+            <Avatar className="w-6 h-6">
+                <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+                <AvatarFallback>N</AvatarFallback>
+            </Avatar>
             <p className="font-semibold flex items-center text-sm">
-                Shams
-                <ChevronDown className="w-4 h-4 ml-1 text-gray-400" />
+                Nishal N poojary
+               
             </p>
         </a>
     );
@@ -150,9 +155,9 @@ const Header = () => {
                         <ProfileLink />
                     </nav>
                     <div className="flex items-center justify-center gap-8">
-                        <a href="#" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Menu</a>
+                        <Link to="/user/dashboard" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Menu</Link>
                         <Logo />
-                        <a href="#" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Contact</a>
+                        <Link to="/user/contact" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Contact</Link>
                     </div>
                     <div className="flex items-center justify-end gap-2">
                          <a href="#" className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-gray-200/50 transition-all">
@@ -170,8 +175,8 @@ const Header = () => {
                  {/* Mobile Menu Dropdown */}
                  {isMenuOpen && (
                     <div className="lg:hidden mt-4 border-t border-gray-200/50 pt-4 flex flex-col items-center gap-4 text-md font-semibold">
-                        <a href="#" className="text-gray-800">Menu</a>
-                        <a href="#" className="text-gray-800">Contact</a>
+                        <Link to="/user/dashboard" className="text-gray-800">Menu</Link>
+                        <Link to="/user/contact" className="text-gray-800">Contact</Link>
                         <div className="sm:hidden flex flex-col items-center gap-4 pt-4 border-t border-gray-200/50 w-full">
                            <LocationLink />
                            <ProfileLink />

@@ -12,11 +12,20 @@ const allRestaurants = [
     { name: 'Kebabsville', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '35-40 mins', cuisine: 'Kebab, North Indian', type: 'non-veg', price: 320 },
     { name: 'Pure Veggies', image: 'https://images.unsplash.com/photo-1627662388842-8d34b3f4db9a?q=80&w=1974&auto=format&fit=crop', rating: 4.9, deliveryTime: '20-25 mins', cuisine: 'North Indian, Thali', type: 'veg', price: 280 },
     { name: 'Smoky Grills', image: 'https://images.unsplash.com/photo-1626082933433-22b46a48f349?q=80&w=2070&auto=format&fit=crop', rating: 4.5, deliveryTime: '40-45 mins', cuisine: 'BBQ, Steak', type: 'non-veg', price: 450 },
+    // 8 more restaurants (with updated live images)
+    { name: 'Wrap & Roll', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1974&auto=format&fit=crop', rating: 4.3, deliveryTime: '20-25 mins', cuisine: 'Wraps, Fast Food', type: 'both', price: 120 },
+    { name: 'Juice Junction', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1974&auto=format&fit=crop', rating: 4.7, deliveryTime: '15-20 mins', cuisine: 'Juices, Beverages', type: 'veg', price: 90 },
+    { name: 'Chaat Bazaar', image: 'https://images.unsplash.com/photo-1506089676908-3592f7389d4d?q=80&w=1974&auto=format&fit=crop', rating: 4.6, deliveryTime: '18-22 mins', cuisine: 'Chaat, Street Food', type: 'veg', price: 110 },
+    { name: 'Tandoori Nights', image: 'https://images.unsplash.com/photo-1504674900247-ec6b0b1b798e?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '30-35 mins', cuisine: 'Tandoori, North Indian', type: 'non-veg', price: 350 },
+    { name: 'Pasta House', image: 'https://images.unsplash.com/photo-1504674900247-1a781979e8c0?q=80&w=1974&auto=format&fit=crop', rating: 4.4, deliveryTime: '25-30 mins', cuisine: 'Pasta, Italian', type: 'veg', price: 210 },
+    { name: 'Sushi Express', image: 'https://images.unsplash.com/photo-1504674900247-eca3a4b9b6b2?q=80&w=1974&auto=format&fit=crop', rating: 4.5, deliveryTime: '35-40 mins', cuisine: 'Sushi, Japanese', type: 'non-veg', price: 400 },
+    { name: 'Bakers Delight', image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?q=80&w=1974&auto=format&fit=crop', rating: 4.9, deliveryTime: '15-20 mins', cuisine: 'Bakery, Desserts', type: 'veg', price: 150 },
+    { name: 'Momo Street', image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?q=80&w=1974&auto=format&fit=crop', rating: 4.6, deliveryTime: '20-25 mins', cuisine: 'Momos, Asian', type: 'both', price: 130 },
 ];
 
 // --- Filter Bar Component ---
 const FilterBar = () => {
-    const filters = ["Sort By", "Fast Delivery", "Ratings 4.0+", "Juice", "Snacks", "Offers", "Less than Rs. 300"];
+    const filters = ["Juice", "Snacks", "Offers",];
     return (
         <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto scrollbar-hide pb-2">
             <button className="flex-shrink-0 px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2">
@@ -118,8 +127,8 @@ export default function App() {
                 {/* --- Header Section --- */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Restaurants in Manipal</h1>
-                        <p className="text-gray-600 mt-1">Showing {filteredRestaurants.length} places</p>
+                        <h1 className="text-3xl font-bold text-gray-900">	Explore the Menu</h1>
+                        <p className="text-gray-600 mt-1">All {filteredRestaurants.length} Dishes</p>
                     </div>
                     <VegToggle filter={dietaryFilter} setFilter={setDietaryFilter} />
                 </div>

@@ -5,6 +5,7 @@ import './App.css'
 import { Button } from './components/ui/button'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import UserDashboard from './routes/UserDashboard'
+import Contact from './pages/user/contact.jsx'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -13,6 +14,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/user/dashboard" element={<UserDashboard />} />
+        <Route path="/user/contact" element={<Contact />} />
         <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
         {/* Add more routes here as needed */}
       </Routes>
