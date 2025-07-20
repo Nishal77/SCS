@@ -1,14 +1,28 @@
-import React from 'react';
+import BlurVignette from "@/components/ui/blur-vignette"
+import React from "react"
 
-export default function Check() {
+
+function Check() {
   return (
-    <div className="w-full min-h-[100px] md:min-h-[140px] lg:min-h-[180px] flex items-center justify-center mb-12 mt-12">
-      <img
-        src="/7071743.jpg"
-        alt="Check Section"
-        className="w-full h-full object-cover object-center rounded-xl"
-        style={{ display: 'block', maxWidth: '81%' }}
-      />
+    <div className="flex items-center justify-center  w-full flex items-center justify-center">
+      <div className="relative max-w-7xl w-full px-4 sm:px-8">
+        <BlurVignette
+          radius="24px"
+          inset="10px"
+          transitionLength="100px"
+          blur="15px"
+          className="rounded-[2.5rem] w-full h-[400px] sm:h-[500px] flex items-center justify-center shadow-xl"
+          switchView={true}
+        >
+          <img
+            src="/footer2.svg"
+            alt="Footer Illustration"
+            className="w-full h-full object-cover transition-all rounded-[2.5rem]"
+          />
+        </BlurVignette>
+      </div>
     </div>
-  );
+  )
 }
+
+export default Check
