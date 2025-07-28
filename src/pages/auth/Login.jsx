@@ -213,12 +213,12 @@ export default function Login() {
         setLoading(false);
 
         // Redirect based on role
-        if (profile.role === 'user') {
+        if (profile.role === 'staff') {
           setTimeout(() => {
-            navigate('/user/dashboard');
+            navigate('/staff/dashboard');
           }, 1000);
         } else {
-          // Handle other roles here
+          // Default to user dashboard for all other roles
           setTimeout(() => {
             navigate('/user/dashboard');
           }, 1000);
@@ -275,6 +275,9 @@ export default function Login() {
         return;
       }
 
+      // Determine role based on email
+      const userRole = localEmail === 'nishalpoojary66@gmail.com' ? 'staff' : 'user';
+      
       // Insert profile data after email confirmation
       const { error: profileError } = await supabase.from('profiles').insert([
         {
@@ -284,6 +287,7 @@ export default function Login() {
           email: localEmail,
           phone: localPhone,
           password: localPassword,
+          role: userRole,
           profile_image_url: null,
         },
       ]);

@@ -5,6 +5,7 @@ import './App.css'
 import { Button } from './components/ui/button'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import UserDashboard from './routes/UserDashboard'
+import StaffDashboard from './routes/StaffDashboard'
 import Contact from './pages/user/contact.jsx'
 import Cart from './pages/user/cart.jsx'
 import Order from './pages/user/order.jsx'
@@ -64,6 +65,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/user/dashboard" element={<UserDashboard />} />
+        <Route path="/staff/dashboard" element={<StaffDashboard />} />
         <Route path="/user/contact" element={
           <ProtectedRoute>
             <Contact />
