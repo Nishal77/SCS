@@ -80,13 +80,6 @@ http://localhost:5173
 - **Email**: `staff@canteen.com`
 - **Password**: `staff123`
 
-### 3. Explore the Staff Dashboard:
-- **Inventory Management**: Add, edit, delete, and manage products
-- **Today's Special**: Toggle star icon to mark items as featured
-- **Filtering**: Use filter buttons (Menu All, Category, Vegetarian, Non-Vegetarian, Today's Special)
-- **Bulk Operations**: Select multiple products and perform bulk actions
-- **Real-time Stats**: View live statistics on dashboard cards
-
 ## 🔌 API Endpoints
 
 ### Authentication
