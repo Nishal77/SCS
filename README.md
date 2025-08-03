@@ -41,8 +41,8 @@ Before you begin, ensure you have the following installed:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/smart-canteen-system.git
-cd smart-canteen-system/CMS
+git clone https://github.com/Nishal77/SCS.git
+cd SCS
 ```
 
 ### 2. Install Dependencies
@@ -176,16 +176,35 @@ npm run lint         # Run ESLint
 
 ## 🤝 Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+We welcome contributions from the community! There are many ways to support and improve the Smart Canteen Management System (CMS) — and writing code is just one of them. Whether it’s fixing bugs, improving documentation, designing UI/UX, suggesting new features, or sharing feedback — every contribution counts.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks!
+If you’d like to contribute code, follow these simple steps:
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+1. **Fork the repository.**
+   [Fork the repository.](https://github.com/Nishal77/SCS/fork)
+
+2. **Clone the fork to your local machine:**
+   ```bash
+   git clone https://github.com/Nishal77/SCS.git
+   cd SCS
+   ```
+
+3. **Create a new branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+4. **Make your changes and commit them**
+   ```bash
+   git commit -am 'feat: Add some feature'
+   ```
+
+5. **Push to the branch**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+6. **Go to [the repository](https://github.com/Nishal77/SCS) and [make a Pull Request.](https://github.com/Nishal77/SCS/compare)**
 
 ## 📝 License
 
