@@ -1,19 +1,10 @@
-# Smart Canteen Management System (CMS)
+# Smart Canteen Management Platform (CMS)
 
-A modern, full-stack web application for managing canteen operations with real-time inventory tracking, order management, and staff dashboard.
+An open-source, full-stack web platform built to streamline and digitize canteen operations — from **real-time inventory tracking** and **order handling** to a responsive, role-based staff dashboard.
 
-![CMS Dashboard](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-![React](https://img.shields.io/badge/React-18.0+-blue)
-![Supabase](https://img.shields.io/badge/Supabase-Database-orange)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-Styling-38B2AC)
+Designed with scalability and user experience in mind, CMS is powered by **React**, **Supabase**, and **Tailwind CSS** — making it a strong fit for both institutional use and production-ready deployment.
 
-
-## 📋 Prerequisites
-
-Before you begin, ensure you have the following installed:
-- **Node.js** (v16.0.0 or higher)
-- **npm** (v8.0.0 or higher)
-- **Git**
+⚡ Built for performance. Designed for people. Powered by open source.
 
 ## 🛠️ Installation
 
