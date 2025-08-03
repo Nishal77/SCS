@@ -73,6 +73,24 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+## ⚙️ Usage
+
+### 1. Access the application in your browser:
+```
+http://localhost:5173
+```
+
+### 2. Login using the provided credentials (for staff access):
+- **Email**: `staff@canteen.com`
+- **Password**: `staff123`
+
+### 3. Explore the Staff Dashboard:
+- **Inventory Management**: Add, edit, delete, and manage products
+- **Today's Special**: Toggle star icon to mark items as featured
+- **Filtering**: Use filter buttons (Menu All, Category, Vegetarian, Non-Vegetarian, Today's Special)
+- **Bulk Operations**: Select multiple products and perform bulk actions
+- **Real-time Stats**: View live statistics on dashboard cards
+
 ## 🔌 API Endpoints
 
 ### Authentication
@@ -146,46 +164,6 @@ const { data } = supabase.storage
   .getPublicUrl('filename.jpg')
 ```
 
-## 🎯 Usage Guide
-
-### Staff Dashboard
-
-#### **Inventory Management**
-- View all products in a clean table format
-- Add new products with detailed information
-- Edit existing products using the edit icon
-- Delete products with confirmation
-- Toggle Today's Special status with star icon
-
-#### **Filtering System**
-- **Menu All**: View all products
-- **Category**: Filter by specific categories
-- **Vegetarian**: Show only vegetarian items
-- **Non-Vegetarian**: Show only non-vegetarian items
-- **Today's Special**: View only featured items
-
-#### **Bulk Operations**
-- Select multiple products using checkboxes
-- Perform bulk delete operations
-- Manage multiple items simultaneously
-
-#### **Real-time Statistics**
-- Total Products count
-- Total Inventory Value
-- In Stock items
-- Low Stock alerts
-- Out of Stock items
-- Vegetarian/Non-vegetarian counts
-- Today's Special count
-
-## 🎨 Customization
-
-The system uses local fonts for better performance and includes:
-- Professional typography system
-- Responsive design for all screen sizes
-- Custom color schemes and branding support
-- Built with Tailwind CSS for consistent design
-
 ## 🔧 Development
 
 ### Available Scripts
@@ -196,59 +174,22 @@ npm run preview      # Preview production build
 npm run lint         # Run ESLint
 ```
 
-## 🚀 Deployment
-
-### Vercel
-1. Connect GitHub repository to Vercel
-2. Set environment variables
-3. Deploy automatically on push
-
-### Netlify
-1. Connect GitHub repository to Netlify
-2. Set build command: `npm run build`
-3. Set publish directory: `dist`
-4. Configure environment variables
-
-## 🔒 Security & Performance
-
-- **Authentication**: Secure user authentication with Supabase Auth
-- **Data Validation**: Input validation on all forms
-- **SQL Injection Protection**: Parameterized queries with Supabase
-- **XSS Protection**: React's built-in XSS protection
-- **Image Optimization**: Automatic compression and optimization
-- **Lazy Loading**: Images and components load on demand
-- **Local Fonts**: No external font dependencies
-
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks!
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the GitHub repository
-- Contact the development team
-
-## 🔄 Version History
-
-### v1.0.0 (Current)
-- ✅ Complete inventory management system
-- ✅ Real-time filtering and search
-- ✅ Today's Special integration
-- ✅ Professional typography system
-- ✅ Responsive design
-- ✅ User and staff dashboards
-- ✅ Image management
-- ✅ Bulk operations
-- ✅ Real-time statistics
 
 ---
 
