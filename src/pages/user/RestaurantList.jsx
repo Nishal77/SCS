@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { handleAddToCart } from '../../lib/auth-utils';
 import { formatProductForUser, isProductAvailable } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
+import FoodSymbol from '../../components/FoodSymbol';
 
 // --- Real Data from Supabase ---
 const useInventoryData = () => {
@@ -51,17 +52,31 @@ const useInventoryData = () => {
 };
 
 // --- Filter Bar Component ---
-const FilterBar = () => {
-    const filters = ["Juice", "Snacks", "Offers",];
+const FilterBar = ({ activeFilter, setActiveFilter }) => {
+    const filters = [
+        { id: 'all', label: 'All', icon: '🍽️' },
+        { id: 'breakfast', label: 'Breakfast', icon: '🌅' },
+        { id: 'lunch', label: 'Lunch', icon: '🍱' },
+        { id: 'dinner', label: 'Dinner', icon: '🌙' },
+        { id: 'snacks', label: 'Snacks', icon: '🍿' },
+        { id: 'beverages', label: 'Beverages', icon: '🥤' },
+        { id: 'juice', label: 'Juice', icon: '🍹' },
+    ];
+
     return (
-        <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto scrollbar-hide pb-2">
-            <button className="flex-shrink-0 px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>Filter</span>
-            </button>
+        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide">
             {filters.map(filter => (
-                <button key={filter} className={`flex-shrink-0 px-4 py-2 bg-white border rounded-full text-sm font-medium hover:bg-gray-50 transition-colors ${filter === 'Juice' || filter === 'Snacks' ? 'border-amber-500 text-amber-600' : 'border-gray-300 text-gray-700'}`}>
-                    {filter === 'Sort By' ? <span className="flex items-center">{filter} <ChevronDown className="w-4 h-4 ml-1" /></span> : filter}
+                <button 
+                    key={filter.id}
+                    onClick={() => setActiveFilter(filter.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2 border ${
+                        activeFilter === filter.id
+                            ? 'bg-gray-900 text-white border-gray-900 shadow-md'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm hover:shadow-md'
+                    }`}
+                >
+                    <span className="text-sm">{filter.icon}</span>
+                    <span>{filter.label}</span>
                 </button>
             ))}
         </div>
@@ -137,49 +152,52 @@ const RestaurantCard = ({ restaurant }) => {
 export default function App() {
     const { products, loading, error } = useInventoryData();
     const [dietaryFilter, setDietaryFilter] = useState('all'); // 'all', 'veg', 'non-veg'
+    const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'breakfast', 'lunch', etc.
 
     const filteredRestaurants = useMemo(() => {
         if (loading) return [];
         if (error) return [];
         
-        if (dietaryFilter === 'all') {
-            return products;
-        }
+        let filtered = products;
+        
+        // Apply dietary filter
         if (dietaryFilter === 'veg') {
-            return products.filter(r => r.category.toLowerCase().includes('veg') || r.category.toLowerCase().includes('vegetarian'));
+            filtered = filtered.filter(r => r.category.toLowerCase().includes('veg') || r.category.toLowerCase().includes('vegetarian'));
+        } else if (dietaryFilter === 'non-veg') {
+            filtered = filtered.filter(r => !r.category.toLowerCase().includes('veg') && !r.category.toLowerCase().includes('vegetarian'));
         }
-        if (dietaryFilter === 'non-veg') {
-            return products.filter(r => !r.category.toLowerCase().includes('veg') && !r.category.toLowerCase().includes('vegetarian'));
+        
+        // Apply category filter
+        if (categoryFilter !== 'all') {
+            filtered = filtered.filter(r => r.category.toLowerCase().includes(categoryFilter.toLowerCase()));
         }
-    }, [dietaryFilter, products, loading, error]);
+        
+        return filtered;
+    }, [dietaryFilter, categoryFilter, products, loading, error]);
 
-    // Veg/Non-Veg Toggle Component (with perfected hover effects)
+    // Veg/Non-Veg Toggle Component (with FoodSymbol icons)
     const VegToggle = ({ filter, setFilter }) => {
-        const baseStyle = "px-3 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 flex items-center gap-2 border";
-        const activeVegStyle = "bg-green-100 text-green-700 border-green-200";
-        const inactiveVegStyle = "text-gray-500 bg-white border-gray-300 hover:bg-green-50 hover:border-green-100 hover:text-green-600";
-        const activeNonVegStyle = "bg-red-100 text-red-700 border-red-200";
-        const inactiveNonVegStyle = "text-gray-500 bg-white border-gray-300 hover:bg-red-50 hover:border-red-100 hover:text-red-600";
-
         return (
             <div className="flex items-center space-x-2">
                 <button 
                     onClick={() => setFilter(filter === 'veg' ? 'all' : 'veg')}
-                    className={`${baseStyle} ${filter === 'veg' ? activeVegStyle : inactiveVegStyle}`}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 border ${
+                        filter === 'veg' 
+                            ? 'bg-green-50 text-green-700 border-green-300 shadow-sm' 
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-600 shadow-sm hover:shadow-md'
+                    }`}
                 >
-                    <span className={`w-4 h-4 border flex items-center justify-center rounded-sm ${filter === 'veg' ? 'border-green-600' : 'border-gray-400'}`}>
-                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                    </span>
-                    Veg
+                    <FoodSymbol type="veg" size="small" />
                 </button>
                 <button 
                     onClick={() => setFilter(filter === 'non-veg' ? 'all' : 'non-veg')}
-                    className={`${baseStyle} ${filter === 'non-veg' ? activeNonVegStyle : inactiveNonVegStyle}`}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 border ${
+                        filter === 'non-veg' 
+                            ? 'bg-red-50 text-red-700 border-red-300 shadow-sm' 
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm hover:shadow-md'
+                    }`}
                 >
-                     <span className={`w-4 h-4 border flex items-center justify-center rounded-sm ${filter === 'non-veg' ? 'border-red-600' : 'border-gray-400'}`}>
-                        <span className="w-2.5 h-2.5 bg-red-600" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></span>
-                    </span>
-                    Non-Veg
+                    <FoodSymbol type="non-veg" size="small" />
                 </button>
             </div>
         );
@@ -217,17 +235,28 @@ export default function App() {
     return (
         <div className="font-sans">
             <div className="container mx-auto">
-                {/* --- Header Section --- */}
+                {/* Section Header with Navigation */}
+                <div className="flex justify-between items-center mb-8">
+                    {/* Left side - Text */}
+                    <div className="text-left">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Complete Menu</h2>
+                        <p className="text-gray-600">Explore our full menu with all available dishes</p>
+                    </div>
+                    
+                    {/* Right side - Veg/Non-Veg Controls */}
+                    <VegToggle filter={dietaryFilter} setFilter={setDietaryFilter} />
+                </div>
+
+                {/* Dish Count and Filter Bar */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                     <div>
                         <p className="text-gray-600 mt-1">All {filteredRestaurants.length} Dishes</p>
                     </div>
-                    <VegToggle filter={dietaryFilter} setFilter={setDietaryFilter} />
                 </div>
 
                 {/* --- Filter Bar --- */}
                 <div className="mb-8">
-                    <FilterBar />
+                    <FilterBar activeFilter={categoryFilter} setActiveFilter={setCategoryFilter} />
                 </div>
 
                 {/* --- Restaurant Grid --- */}

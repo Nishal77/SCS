@@ -1,89 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn } from 'lucide-react';
+import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn, RefreshCw } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from 'react-router-dom';
 import supabase from '../../lib/supabase';
 
-// Custom Hook to fetch user's location (city)
-const useLocation = () => {
-    const [location, setLocation] = useState({
-        city: null,
-        countryCode: null,
-        loading: true,
-        error: null,
-    });
+// Simple Live Location Hook
+const useLiveLocation = () => {
+  const [location, setLocation] = useState({ lat: null, lng: null });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!navigator.geolocation) {
-            setLocation(loc => ({
-                ...loc,
-                loading: false,
-                error: "Geolocation is not supported by your browser."
-            }));
-            return;
-        }
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      setLoading(false);
+      return;
+    }
 
-        const successHandler = async (position) => {
-            const { latitude, longitude } = position.coords;
-            try {
-                // Using a CORS-friendly geocoding service or fallback to coordinates
-                // For now, we'll use a simple fallback to avoid CORS issues
-                setLocation({
-                    city: "Moodbidri",
-                    countryCode: "IN",
-                    loading: false,
-                    error: null,
-                });
-            } catch (error) {
-                setLocation({
-                    city: "Moodbidri",
-                    countryCode: "IN",
-                    loading: false,
-                    error: null,
-                });
-            }
-        };
-
-        const errorHandler = (error) => {
-            let errorMessage = "An unknown error occurred.";
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = "Location access denied.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = "Location information is unavailable.";
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = "The request to get user location timed out.";
-                    break;
-                default:
-                    errorMessage = "An unknown error occurred.";
-            }
-            setLocation({
-                city: null,
-                countryCode: null,
-                loading: false,
-                error: errorMessage,
-            });
-        };
-
-        navigator.geolocation.getCurrentPosition(successHandler, errorHandler, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
         });
+        setError(null);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 5000,
+      }
+    );
 
-    }, []); // Empty dependency array ensures this runs only once on mount
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
-    return location;
+  return { location, error, loading };
 };
 
-// --- Header Component with Geolocation ---
+// --- Header Component with Live Location ---
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [userSession, setUserSession] = useState(null);
-    const { city, countryCode, loading, error } = useLocation();
+    const { location, error, loading } = useLiveLocation();
     const navigate = useNavigate();
 
     // Get user session data
@@ -133,14 +98,35 @@ const Header = () => {
         </Link>
     );
 
-    // Reusable NavLink components for different contexts
-    const LocationLink = ({ compact = false }) => (
-        <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors border border-gray-200/80 rounded-lg px-3 py-2 hover:bg-gray-100/50">
+    // Location Display Component
+    const LocationDisplay = ({ compact = false }) => (
+        <div className="flex items-center gap-2 text-gray-600 border border-gray-200/80 rounded-lg px-3 py-2">
             <MapPin className="w-4 h-4 text-gray-400"/>
-            <p className="font-semibold flex items-center text-sm">
-                {loading ? "Fetching..." : (error || city || "Set Location")}
-            </p>
-        </a>
+            <div className="flex flex-col">
+                {loading ? (
+                    <span className="flex items-center gap-1 text-sm">
+                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                        Getting location...
+                    </span>
+                ) : error ? (
+                    <div className="flex flex-col">
+                        <span className="text-red-500 text-xs">Location unavailable</span>
+                    </div>
+                ) : location.lat && location.lng ? (
+                    <div className="flex flex-col">
+                        <span className="text-sm font-semibold flex items-center gap-1">
+                            📍 Live Location
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        </span>
+                        <span className="text-xs text-gray-400">
+                            {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                        </span>
+                    </div>
+                ) : (
+                    <span className="text-sm">Location</span>
+                )}
+            </div>
+        </div>
     );
 
     const ProfileLink = ({ compact = false }) => (
@@ -171,7 +157,7 @@ const Header = () => {
                                     <div className="flex items-center gap-4">
                     <Logo />
                     <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-2">
-                       <LocationLink compact />
+                       <LocationDisplay compact />
                        {userSession && <ProfileLink compact />}
                     </div>
                 </div>
@@ -189,7 +175,7 @@ const Header = () => {
                 {/* Desktop Header */}
                 <div className="hidden lg:grid grid-cols-3 items-center">
                     <nav className="flex items-center gap-4 text-md font-semibold">
-                        <LocationLink />
+                        <LocationDisplay />
                         {userSession && <ProfileLink />}
                     </nav>
                     <div className="flex items-center justify-center gap-8">
@@ -229,7 +215,7 @@ const Header = () => {
                         <Link to="/user/dashboard" className="text-gray-800">Menu</Link>
                         <Link to="/user/contact" className="text-gray-800">Contact</Link>
                         <div className="sm:hidden flex flex-col items-center gap-4 pt-4 border-t border-gray-200/50 w-full">
-                           <LocationLink />
+                           <LocationDisplay />
                            {userSession && <ProfileLink />}
                         </div>
                         {userSession ? (

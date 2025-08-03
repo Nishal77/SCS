@@ -21,19 +21,19 @@ const useCategoriesData = () => {
                 
                 // Get unique categories
                 const uniqueCategories = [...new Set(data.map(item => item.category))];
-                // Create category objects with default images
+                // Create category objects with simple placeholder images
                 const categoryObjects = uniqueCategories.map(category => ({
                     name: category,
-                    image: `https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop`
+                    image: `https://placehold.co/200x200/F3F4F6/9CA3AF?text=${category.charAt(0).toUpperCase()}`
                 }));
                 
                 // If no categories found, add some default ones
                 if (categoryObjects.length === 0) {
                     categoryObjects.push(
-                        { name: 'Breakfast', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop' },
-                        { name: 'Lunch', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=200&auto=format&fit=crop' },
-                        { name: 'Dinner', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=200&auto=format&fit=crop' },
-                        { name: 'Snacks', image: 'https://images.unsplash.com/photo-1625220194771-49bdda222896?q=80&w=200&auto=format&fit=crop' }
+                        { name: 'Breakfast', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=B' },
+                        { name: 'Lunch', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=L' },
+                        { name: 'Dinner', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=D' },
+                        { name: 'Snacks', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=S' }
                     );
                 }
                 setFoodCategories(categoryObjects);
@@ -59,7 +59,6 @@ const FoodCategoryCard = ({ category }) => (
                 src={category.image}
                 alt={category.name}
                 className="w-24 h-24 object-cover rounded-full mx-auto transition-transform duration-300 ease-in-out group-hover:scale-105"
-                onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/150x150/F3F4F6/9CA3AF?text=Error'; }}
             />
         </div>
         <p className="mt-2 text-base font-medium text-gray-700 truncate">{category.name}</p>
@@ -147,18 +146,26 @@ const FoodCategoriesCarousel = () => {
 
     return (
         <div className="w-full">
-            <div className="flex justify-between items-center mb-5">
+            {/* Section Header with Navigation */}
+            <div className="flex justify-between items-center mb-8">
+                {/* Left side - Text */}
+                <div className="text-left">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Explore the Menu</h2>
+                    <p className="text-gray-600">Browse by categories to find your favorite dishes</p>
+                </div>
+                
+                {/* Right side - Navigation Controls */}
                 <div className="flex space-x-2">
                     <button
                         onClick={() => scroll('left')}
-                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2.5 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                        className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
                         aria-label="Scroll left"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </button>
                     <button
                         onClick={() => scroll('right')}
-                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2.5 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                        className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
                         aria-label="Scroll right"
                     >
                         <ArrowRight className="w-5 h-5 text-gray-600" />

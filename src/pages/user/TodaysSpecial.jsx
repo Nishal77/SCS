@@ -119,7 +119,7 @@ const FoodItemCard = ({ item }) => {
 };
 
 // --- Draggable Carousel Component ---
-const FoodCarousel = ({ title, children }) => {
+const FoodCarousel = ({ children }) => {
     const scrollContainerRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -161,19 +161,9 @@ const FoodCarousel = ({ title, children }) => {
 
     return (
         <div className="w-full">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex space-x-3">
-                    <button onClick={() => scroll('left')} className="bg-white rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500" aria-label="Scroll left">
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <button onClick={() => scroll('right')} className="bg-white rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500" aria-label="Scroll right">
-                        <ArrowRight className="w-5 h-5 text-gray-700" />
-                    </button>
-                </div>
-            </div>
             <div
                 ref={scrollContainerRef}
-                className="flex space-x-6 pb-6 overflow-x-auto scrollbar-hide cursor-grab"
+                className="food-carousel flex space-x-6 pb-6 overflow-x-auto scrollbar-hide cursor-grab"
                 onMouseDown={onMouseDown}
                 onMouseLeave={onMouseLeaveOrUp}
                 onMouseUp={onMouseLeaveOrUp}
@@ -235,7 +225,50 @@ const TodaysSpecial = () => {
   return (
     <div className="font-sans">
       <div className="container mx-auto">
-        <FoodCarousel title="">
+        {/* Section Header with Navigation */}
+        <div className="flex justify-between items-center mb-8">
+            {/* Left side - Text */}
+            <div className="text-left">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Hot Picks of the Day</h2>
+                <p className="text-gray-600">Today's most popular and trending items</p>
+            </div>
+            
+            {/* Right side - Navigation Controls */}
+            <div className="flex space-x-2">
+                <button
+                    onClick={() => {
+                        const scrollContainer = document.querySelector('.food-carousel');
+                        if (scrollContainer) {
+                            scrollContainer.scrollBy({
+                                left: -scrollContainer.offsetWidth * 0.9,
+                                behavior: 'smooth',
+                            });
+                        }
+                    }}
+                    className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
+                    aria-label="Scroll left"
+                >
+                    <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <button
+                    onClick={() => {
+                        const scrollContainer = document.querySelector('.food-carousel');
+                        if (scrollContainer) {
+                            scrollContainer.scrollBy({
+                                left: scrollContainer.offsetWidth * 0.9,
+                                behavior: 'smooth',
+                            });
+                        }
+                    }}
+                    className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
+                    aria-label="Scroll right"
+                >
+                    <ArrowRight className="w-5 h-5 text-gray-600" />
+                </button>
+            </div>
+        </div>
+        
+        <FoodCarousel>
             {foodItems.map((item) => (
                 <FoodItemCard key={item.id} item={item} />
             ))}
