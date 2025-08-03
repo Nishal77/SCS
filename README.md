@@ -83,30 +83,157 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
-## 🗄️ Database Schema
+## 🔌 API Endpoints
 
-### Core Tables
+### Authentication Endpoints
+```javascript
+// User Sign Up
+supabase.auth.signUp({
+  email: 'user@example.com',
+  password: 'password123'
+})
 
-#### `inventory`
-- `id` - Primary key
-- `item_name` - Product name
-- `description` - Product description
-- `price` - Product price
-- `category` - Product category (Breakfast, Lunch, Dinner, etc.)
-- `food_type` - Veg/Non-veg classification
-- `stock_constant` - Total stock capacity
-- `stock_available` - Current available stock
-- `min_to_cook` - Preparation time in minutes
-- `image_url` - Product image URL
-- `is_todays_special` - Boolean for featured items
-- `added_by` - User ID who added the product
-- `created_at` - Timestamp
+// User Sign In
+supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password123'
+})
 
-#### `profiles`
-- `id` - Primary key
-- `name` - User's full name
-- `email_name` - Email address
-- `role` - User role (staff, admin, etc.)
+// User Sign Out
+supabase.auth.signOut()
+
+// Get Current User
+supabase.auth.getUser()
+```
+
+### Inventory Management Endpoints
+```javascript
+// Fetch All Products
+supabase
+  .from('inventory')
+  .select('*, profiles:added_by(id, name, email_name)')
+  .order('created_at', { ascending: false })
+
+// Add New Product
+supabase
+  .from('inventory')
+  .insert({
+    item_name: 'Product Name',
+    description: 'Product Description',
+    price: 100.00,
+    category: 'Breakfast',
+    food_type: 'veg',
+    stock_constant: 50,
+    stock_available: 50,
+    min_to_cook: 10,
+    image_url: 'image_url',
+    is_todays_special: false,
+    added_by: 'user_id'
+  })
+  .select()
+  .single()
+
+// Update Product
+supabase
+  .from('inventory')
+  .update({
+    item_name: 'Updated Name',
+    price: 150.00,
+    is_todays_special: true
+  })
+  .eq('id', 'product_id')
+  .select()
+  .single()
+
+// Delete Product
+supabase
+  .from('inventory')
+  .delete()
+  .eq('id', 'product_id')
+
+// Bulk Delete Products
+supabase
+  .from('inventory')
+  .delete()
+  .in('id', ['id1', 'id2', 'id3'])
+
+// Toggle Today's Special Status
+supabase
+  .from('inventory')
+  .update({ is_todays_special: true })
+  .eq('id', 'product_id')
+  .select()
+  .single()
+
+// Filter Products by Category
+supabase
+  .from('inventory')
+  .select('*')
+  .eq('category', 'Breakfast')
+
+// Filter Products by Food Type
+supabase
+  .from('inventory')
+  .select('*')
+  .eq('food_type', 'veg')
+
+// Filter Today's Special Items
+supabase
+  .from('inventory')
+  .select('*')
+  .eq('is_todays_special', true)
+```
+
+### User Profile Endpoints
+```javascript
+// Fetch User Profile
+supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', 'user_id')
+  .single()
+
+// Update User Profile
+supabase
+  .from('profiles')
+  .update({
+    name: 'Updated Name',
+    email_name: 'newemail@example.com'
+  })
+  .eq('id', 'user_id')
+```
+
+### Storage Endpoints
+```javascript
+// Upload Image
+supabase.storage
+  .from('product-images')
+  .upload('filename.jpg', file)
+
+// Get Image URL
+supabase.storage
+  .from('product-images')
+  .getPublicUrl('filename.jpg')
+
+// Delete Image
+supabase.storage
+  .from('product-images')
+  .remove(['filename.jpg'])
+```
+
+### Real-time Subscriptions
+```javascript
+// Subscribe to Inventory Changes
+supabase
+  .channel('inventory_changes')
+  .on('postgres_changes', 
+    { event: '*', schema: 'public', table: 'inventory' },
+    (payload) => {
+      console.log('Inventory changed:', payload)
+    }
+  )
+  .subscribe()
+```
 
 ## 🎯 Usage Guide
 
