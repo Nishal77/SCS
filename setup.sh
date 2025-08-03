@@ -58,7 +58,7 @@ check_docker_daemon() {
     print_success "Docker daemon is running"
 }
 
-# Check if .env file exists
+# Check if .env file exists and validate environment variables
 check_env_file() {
     print_status "Checking environment configuration..."
     if [ ! -f .env ]; then
@@ -66,7 +66,15 @@ check_env_file() {
         if [ -f env.example ]; then
             cp env.example .env
             print_success "Created .env file from env.example"
-            print_warning "Please update .env file with your Supabase credentials before running the application"
+            print_error "Please update .env file with your Supabase credentials before running the application:"
+            echo ""
+            echo "1. Open .env file: nano .env"
+            echo "2. Replace the placeholder values with your actual Supabase credentials:"
+            echo "   VITE_SUPABASE_URL=https://your-project-id.supabase.co"
+            echo "   VITE_SUPABASE_ANON_KEY=your-anon-key-here"
+            echo "3. Save the file and run this script again"
+            echo ""
+            exit 1
         else
             print_error "env.example file not found. Please create a .env file with your Supabase credentials:"
             echo "VITE_SUPABASE_URL=your_supabase_project_url"
@@ -75,6 +83,22 @@ check_env_file() {
         fi
     else
         print_success ".env file found"
+        
+        # Validate environment variables
+        if ! grep -q "VITE_SUPABASE_URL=https://" .env || ! grep -q "VITE_SUPABASE_ANON_KEY=" .env; then
+            print_error "Invalid Supabase credentials in .env file!"
+            echo ""
+            echo "Please ensure your .env file contains:"
+            echo "VITE_SUPABASE_URL=https://your-project-id.supabase.co"
+            echo "VITE_SUPABASE_ANON_KEY=your-anon-key-here"
+            echo ""
+            echo "Current .env content:"
+            cat .env
+            echo ""
+            exit 1
+        fi
+        
+        print_success "Supabase credentials are properly configured"
     fi
 }
 

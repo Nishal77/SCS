@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
-import { Button } from './components/ui/button'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import UserDashboard from './routes/UserDashboard'
 import StaffDashboard from './routes/StaffDashboard'
@@ -59,8 +56,6 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <Router>
       <Routes>

@@ -80,6 +80,13 @@ http://localhost:5173
 - **Email**: `staff@canteen.com`
 - **Password**: `staff123`
 
+### 3. Explore the Staff Dashboard:
+- **Inventory Management**: Add, edit, delete, and manage products
+- **Today's Special**: Toggle star icon to mark items as featured
+- **Filtering**: Use filter buttons (Menu All, Category, Vegetarian, Non-Vegetarian, Today's Special)
+- **Bulk Operations**: Select multiple products and perform bulk actions
+- **Real-time Stats**: View live statistics on dashboard cards
+
 ## 🔌 API Endpoints
 
 ### Authentication
@@ -173,6 +180,14 @@ docker-compose down
 docker-compose up -d --build
 ```
 
+### Available Scripts
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+```
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! There are many ways to support and improve the Smart Canteen Management System (CMS) — and writing code is just one of them. Whether it’s fixing bugs, improving documentation, designing UI/UX, suggesting new features, or sharing feedback — every contribution counts.
@@ -205,4 +220,10 @@ If you’d like to contribute code, follow these simple steps:
 
 6. **Go to [the repository](https://github.com/Nishal77/SCS) and [make a Pull Request.](https://github.com/Nishal77/SCS/compare)**
 
+## 📝 License
 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ for efficient canteen management**
