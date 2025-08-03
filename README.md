@@ -17,18 +17,41 @@ Before you begin, ensure you have the following installed:
 
 ## 🛠️ Installation
 
-### 1. Clone the Repository
+### Option 1: Docker Setup (Recommended)
+
+#### Prerequisites
+- **Docker** and **Docker Compose** installed
+- Docker daemon running
+
+#### Instant Setup
+```bash
+# Clone the repository
+git clone https://github.com/Nishal77/SCS.git
+cd SCS
+
+# Gives permission to execute the setup file
+chmod +x setup.sh
+
+# Runs the setup script for instant deployment
+./setup.sh
+```
+
+The application will be available at `http://localhost:3000`
+
+### Option 2: Manual Setup
+
+#### 1. Clone the Repository
 ```bash
 git clone https://github.com/Nishal77/SCS.git
 cd SCS
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 ```bash
 npm install
 ```
 
-### 3. Environment Setup
+#### 3. Environment Setup
 ```bash
 # Copy the example environment file
 cp env.example .env
@@ -37,14 +60,14 @@ cp env.example .env
 nano .env
 ```
 
-### 4. Configure Environment Variables
+#### 4. Configure Environment Variables
 Add your Supabase credentials to the `.env` file:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 5. Start the Development Server
+#### 5. Start the Development Server
 ```bash
 npm run dev
 ```
@@ -55,6 +78,10 @@ The application will be available at `http://localhost:5173`
 
 ### 1. Access the application in your browser:
 ```
+# Docker deployment
+http://localhost:3000
+
+# Manual deployment
 http://localhost:5173
 ```
 
@@ -143,6 +170,24 @@ const { data } = supabase.storage
 ```
 
 ## 🔧 Development
+
+### Docker Commands
+```bash
+# Production build and run
+docker-compose up -d
+
+# Development mode with hot reload
+docker-compose --profile dev up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop application
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+```
 
 ### Available Scripts
 ```bash
