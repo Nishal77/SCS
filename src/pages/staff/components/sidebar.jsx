@@ -1,8 +1,3 @@
-// This component is a web-based implementation using React and Tailwind CSS.
-// It has been expanded into a full, responsive dashboard layout, in the style of shadcn/ui.
-// To run this, you would need React and the lucide-react library.
-// npm install react react-dom lucide-react
-
 import React, { useState, useEffect } from 'react';
 // Icons for the UI
 import { 
@@ -12,15 +7,6 @@ import {
     BadgeCheck, Bell, CreditCard, Sparkles, BarChart3, TrendingUp
 } from 'lucide-react';
 
-// Import shadcn components
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -29,19 +15,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Company Profile at the top of the sidebar
 const CompanyProfile = () => (
-    <div className="flex items-center justify-between p-3 border-b border-gray-200">
+    <div className="flex items-center justify-between p-1">
         <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Utensils size={18} className="text-orange-600" />
+                <img src="/canteenlogo.png" alt="Canteen Logo" className="w-6 h-6 object-contain" />
             </div>
             <div>
                 <p className="font-bold text-gray-900 text-sm">MITE Canteen</p>
                 <p className="text-xs text-gray-500">Staff Portal</p>
             </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-700">
-            <ChevronsUpDown size={14} />
-        </button>
     </div>
 );
 
@@ -72,7 +55,7 @@ const UserProfile = ({ onDropdownToggle }) => {
     const [userData, setUserData] = useState({
         email: 'user@canteen.com',
         email_name: 'user',
-        avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
+        avatar: '/'
     });
 
     useEffect(() => {
@@ -85,7 +68,7 @@ const UserProfile = ({ onDropdownToggle }) => {
                         setUserData({
                             email: session.email,
                             email_name: session.email_name || session.email.split('@')[0],
-                            avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
+                            avatar: 'https://randomuser.me/api/portraits/lego/8.jpg'
                         });
                     }
                 }

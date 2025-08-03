@@ -11,6 +11,8 @@ import {
     XCircle, AlertCircle, Package, Phone, MapPin, Calendar, DollarSign, Search,
     Filter, Upload, Eye, EyeOff, Tag, Image as ImageIcon
 } from 'lucide-react';
+import supabase from '@/lib/supabase';
+
 
 // --- Reusable Components ---
 
@@ -92,33 +94,49 @@ const CategoryBadge = ({ category }) => {
 };
 
 // Rating Component
-const Rating = ({ value }) => (
-    <div className="flex items-center gap-1">
-        <Star size={16} className="text-yellow-400 fill-yellow-400" />
-        <span className="font-semibold text-gray-700">{value.toFixed(1)}</span>
-    </div>
-);
+const Rating = ({ value }) => {
+    if (typeof value !== 'number' || isNaN(value)) return null;
+    return (
+        <div className="flex items-center gap-1">
+            <Star size={16} className="text-yellow-400 fill-yellow-400" />
+            <span className="font-semibold text-gray-700">{value.toFixed(1)}</span>
+        </div>
+    );
+};
 
 // Product Image Component
-const ProductImage = ({ image, name, onEdit }) => (
-    <div className="relative group">
-        <img 
-            src={image} 
-            alt={name} 
-            className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-            onError={(e) => { 
-                e.target.onerror = null; 
-                e.target.src='https://placehold.co/64x64/F3F4F6/9CA3AF?text=Image'; 
-            }}
-        />
-        <button 
-            onClick={onEdit}
-            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
-        >
-            <ImageIcon size={16} className="text-white" />
-        </button>
-    </div>
-);
+const ProductImage = ({ image, name, onEdit }) => {
+    if (!image || image.trim() === '') {
+        return (
+            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                <ImageIcon size={24} className="text-gray-400" />
+            </div>
+        );
+    }
+    return (
+        <div className="relative group">
+            <img 
+                src={image} 
+                alt={name || 'Product'}
+                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                onError={(e) => { 
+                    e.target.onerror = null; 
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                }}
+            />
+            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200 hidden">
+                <ImageIcon size={24} className="text-gray-400" />
+            </div>
+            <button 
+                onClick={onEdit}
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+            >
+                <ImageIcon size={16} className="text-white" />
+            </button>
+        </div>
+    );
+};
 
 // Search and Filter Component
 const SearchAndFilter = ({ onSearch, onFilter }) => {
@@ -201,20 +219,23 @@ const SearchAndFilter = ({ onSearch, onFilter }) => {
 // Add/Edit Product Modal Component
 const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
     const [formData, setFormData] = useState({
-        name: product?.name || '',
+        name: product?.item_name || '',
         description: product?.description || '',
         price: product?.price || '',
         category: product?.category || 'Snacks',
-        status: product?.status || 'In Stock',
-        stock: product?.stock || '',
-        image: product?.image || '',
-        rating: product?.rating || 4.5,
-        deliveryTime: product?.deliveryTime || '20-25 mins',
-        cuisine: product?.cuisine || 'Indian'
+        image: product?.image_url || '',
+        deliveryTime: product?.min_to_cook || '',
+        stockConstant: product?.stock_constant || '',
+        stockAvailable: product?.stock_available || '',
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        // All fields required
+        if (!formData.name || !formData.description || !formData.price || !formData.category || !formData.deliveryTime || !formData.stockConstant) {
+            alert('All fields are required.');
+            return;
+        }
         onSave(formData);
         onClose();
     };
@@ -254,7 +275,6 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                 required
                             />
                         </div>
-                        
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
                             <input
@@ -264,9 +284,10 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                 onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 required
+                                min="0"
+                                step="0.01"
                             />
                         </div>
-                        
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                             <select
@@ -274,7 +295,9 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                 value={formData.category}
                                 onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                required
                             >
+                                <option value="">Select Category</option>
                                 <option value="Breakfast">Breakfast</option>
                                 <option value="Lunch">Lunch</option>
                                 <option value="Dinner">Dinner</option>
@@ -283,73 +306,45 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                 <option value="Desserts">Desserts</option>
                             </select>
                         </div>
-                        
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                            <select
-                                name="status"
-                                value={formData.status}
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time (min)</label>
+                            <input
+                                type="number"
+                                name="deliveryTime"
+                                value={formData.deliveryTime}
                                 onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            >
-                                <option value="In Stock">In Stock</option>
-                                <option value="Out of Stock">Out of Stock</option>
-                                <option value="Low Stock">Low Stock</option>
-                                <option value="Discontinued">Discontinued</option>
-                            </select>
+                                required
+                                min="0"
+                            />
                         </div>
-                        
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity</label>
                             <input
                                 type="number"
-                                name="stock"
-                                value={formData.stock}
+                                name="stockConstant"
+                                value={formData.stockConstant}
                                 onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 required
+                                min="0"
+                                placeholder="Total stock available"
                             />
                         </div>
-                        
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Available Stock</label>
                             <input
                                 type="number"
-                                name="rating"
-                                value={formData.rating}
+                                name="stockAvailable"
+                                value={formData.stockAvailable}
                                 onChange={handleChange}
-                                step="0.1"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                required
                                 min="0"
-                                max="5"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                placeholder="Currently available"
                             />
                         </div>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time</label>
-                            <input
-                                type="text"
-                                name="deliveryTime"
-                                value={formData.deliveryTime}
-                                onChange={handleChange}
-                                placeholder="e.g., 20-25 mins"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            />
-                        </div>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
-                            <input
-                                type="text"
-                                name="cuisine"
-                                value={formData.cuisine}
-                                onChange={handleChange}
-                                placeholder="e.g., Indian, Chinese"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            />
-                        </div>
-                        
-                        <div>
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
                             <input
                                 type="url"
@@ -361,7 +356,6 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                             />
                         </div>
                     </div>
-                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                         <textarea
@@ -371,9 +365,9 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                             rows="3"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                             placeholder="Product description..."
+                            required
                         />
                     </div>
-                    
                     <div className="flex items-center justify-end gap-3 pt-4">
                         <button
                             type="button"
@@ -402,114 +396,42 @@ const InventoryTable = () => {
     const [modalMode, setModalMode] = useState('add');
     const [editingProduct, setEditingProduct] = useState(null);
     const [filteredProducts, setFilteredProducts] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Initial inventory data
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            name: 'Masala Dosa',
-            description: 'Crispy dosa with spiced potato filling',
-            price: 120,
-            category: 'Breakfast',
-            status: 'In Stock',
-            stock: 50,
-            image: 'https://images.unsplash.com/photo-1668665632120-d3a3f5b08076?q=80&w=2070&auto=format&fit=crop',
-            rating: 4.7,
-            deliveryTime: '20-25 mins',
-            cuisine: 'South Indian'
-        },
-        {
-            id: 2,
-            name: 'Samosa',
-            description: 'Crispy pastry with spiced potato and peas',
-            price: 25,
-            category: 'Snacks',
-            status: 'In Stock',
-            stock: 100,
-            image: 'https://images.unsplash.com/photo-1643282333213-a40091c8d5a1?q=80&w=1964&auto=format&fit=crop',
-            rating: 4.5,
-            deliveryTime: '10-15 mins',
-            cuisine: 'Indian'
-        },
-        {
-            id: 3,
-            name: 'Filter Coffee',
-            description: 'Traditional South Indian filter coffee',
-            price: 30,
-            category: 'Beverages',
-            status: 'In Stock',
-            stock: 200,
-            image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1974&auto=format&fit=crop',
-            rating: 4.8,
-            deliveryTime: '5-10 mins',
-            cuisine: 'South Indian'
-        },
-        {
-            id: 4,
-            name: 'Chicken Biryani',
-            description: 'Aromatic rice dish with tender chicken',
-            price: 250,
-            category: 'Lunch',
-            status: 'Low Stock',
-            stock: 15,
-            image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop',
-            rating: 4.9,
-            deliveryTime: '30-35 mins',
-            cuisine: 'Hyderabadi'
-        },
-        {
-            id: 5,
-            name: 'Paneer Butter Masala',
-            description: 'Cottage cheese in rich tomato gravy',
-            price: 180,
-            category: 'Dinner',
-            status: 'In Stock',
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1565557623262-b27e252489a9?q=80&w=1965&auto=format&fit=crop',
-            rating: 4.6,
-            deliveryTime: '25-30 mins',
-            cuisine: 'North Indian'
-        },
-        {
-            id: 6,
-            name: 'Gulab Jamun',
-            description: 'Sweet milk solids in sugar syrup',
-            price: 40,
-            category: 'Desserts',
-            status: 'Out of Stock',
-            stock: 0,
-            image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=1987&auto=format&fit=crop',
-            rating: 4.4,
-            deliveryTime: '10-15 mins',
-            cuisine: 'Indian'
-        }
-    ]);
+    // Fetch inventory from Supabase
+    React.useEffect(() => {
+        const fetchInventory = async () => {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('inventory')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) setError(error.message);
+            else setProducts(data || []);
+            setLoading(false);
+        };
+        fetchInventory();
+    }, []);
 
-    // Initialize filtered products
     React.useEffect(() => {
         setFilteredProducts(products);
     }, [products]);
 
     const handleSearch = (searchTerm) => {
         const filtered = products.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.cuisine.toLowerCase().includes(searchTerm.toLowerCase())
+            (product.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
         setFilteredProducts(filtered);
     };
 
-    const handleFilter = ({ category, status }) => {
+    const handleFilter = ({ category }) => {
         let filtered = products;
-        
-        if (category !== 'all') {
+        if (category && category !== 'all') {
             filtered = filtered.filter(product => product.category === category);
         }
-        
-        if (status !== 'all') {
-            filtered = filtered.filter(product => product.status === status);
-        }
-        
         setFilteredProducts(filtered);
     };
 
@@ -531,29 +453,47 @@ const InventoryTable = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteProduct = (id) => {
+    const handleDeleteProduct = async (id) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
+            await supabase.from('inventory').delete().eq('id', id);
             setProducts(prev => prev.filter(product => product.id !== id));
             setSelectedProducts(prev => prev.filter(productId => productId !== id));
         }
     };
 
-    const handleSaveProduct = (formData) => {
+    const handleSaveProduct = async (formData) => {
         if (modalMode === 'add') {
-            const newProduct = {
-                ...formData,
-                id: Math.max(...products.map(p => p.id)) + 1
-            };
-            setProducts(prev => [...prev, newProduct]);
-        } else {
-            setProducts(prev => prev.map(product => 
-                product.id === editingProduct.id ? { ...formData, id: product.id } : product
-            ));
+            const { data, error } = await supabase.from('inventory').insert([
+                {
+                    item_name: formData.name,
+                    description: formData.description,
+                    price: formData.price,
+                    category: formData.category,
+                    image_url: formData.image,
+                    min_to_cook: parseInt(formData.deliveryTime) || 0,
+                    stock_constant: parseInt(formData.stockConstant) || 0,
+                    stock_available: parseInt(formData.stockAvailable) || parseInt(formData.stockConstant) || 0,
+                }
+            ]).select();
+            if (!error && data) setProducts(prev => [data[0], ...prev]);
+        } else if (editingProduct) {
+            const { data, error } = await supabase.from('inventory').update({
+                item_name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                category: formData.category,
+                image_url: formData.image,
+                min_to_cook: parseInt(formData.deliveryTime) || 0,
+                stock_constant: parseInt(formData.stockConstant) || 0,
+                stock_available: parseInt(formData.stockAvailable) || parseInt(formData.stockConstant) || 0,
+            }).eq('id', editingProduct.id).select();
+            if (!error && data) setProducts(prev => prev.map(product => product.id === editingProduct.id ? data[0] : product));
         }
     };
 
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
+            await supabase.from('inventory').delete().in('id', selectedProducts);
             setProducts(prev => prev.filter(product => !selectedProducts.includes(product.id)));
             setSelectedProducts([]);
         }
@@ -630,14 +570,14 @@ const InventoryTable = () => {
                                 <td className="p-3">
                                     <div className="flex items-center gap-3">
                                         <ProductImage 
-                                            image={product.image} 
-                                            name={product.name}
+                                            image={product.image_url} 
+                                            name={product.item_name}
                                             onEdit={() => handleEditProduct(product)}
                                         />
                                         <div>
-                                            <p className="font-bold text-gray-800">{product.name}</p>
+                                            <p className="font-bold text-gray-800">{product.item_name}</p>
                                             <p className="text-xs text-gray-500">{product.cuisine}</p>
-                                            <p className="text-xs text-gray-400">{product.deliveryTime}</p>
+                                            <p className="text-xs text-gray-400">{product.min_to_cook}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -648,7 +588,10 @@ const InventoryTable = () => {
                                     <p className="font-bold text-gray-800">₹{product.price}</p>
                                 </td>
                                 <td className="p-3">
-                                    <p className="font-medium text-gray-600">{product.stock}</p>
+                                    <div>
+                                        <p className="font-medium text-gray-600">{product.stock_available || 0}</p>
+                                        <p className="text-xs text-gray-500">of {product.stock_constant || 0}</p>
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     <StatusBadge status={product.status} />
