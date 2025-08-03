@@ -205,10 +205,4 @@ If you’d like to contribute code, follow these simple steps:
 
 6. **Go to [the repository](https://github.com/Nishal77/SCS) and [make a Pull Request.](https://github.com/Nishal77/SCS/compare)**
 
-## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Built with ❤️ for efficient canteen management**
