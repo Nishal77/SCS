@@ -7,28 +7,6 @@ A modern, full-stack web application for managing canteen operations with real-t
 ![Supabase](https://img.shields.io/badge/Supabase-Database-orange)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-Styling-38B2AC)
 
-## 🚀 Features
-
-### 📊 **Staff Dashboard**
-- **Real-time Inventory Management**: Track products, stock levels, and pricing
-- **Advanced Filtering System**: Filter by category, food type (veg/non-veg), and Today's Special
-- **Bulk Operations**: Select and manage multiple products simultaneously
-- **Today's Special Integration**: Mark and manage featured items directly from inventory
-- **Live Statistics**: Real-time dashboard with product counts, stock levels, and revenue tracking
-- **Professional Typography**: Custom local fonts for optimal performance
-
-### 🛒 **User Interface**
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Modern UI/UX**: Clean, intuitive interface with smooth animations
-- **Real-time Updates**: Live data synchronization across all components
-- **Image Management**: Product image upload and management system
-
-### 🔧 **Technical Features**
-- **Real-time Database**: Supabase integration with live data updates
-- **Authentication System**: Secure user login and session management
-- **Image Storage**: Cloud-based image storage with automatic optimization
-- **Performance Optimized**: Fast loading times with efficient data fetching
-- **Offline Capable**: Local font loading for better performance
 
 ## 📋 Prerequisites
 
@@ -185,7 +163,7 @@ If you’d like to contribute code, follow these simple steps:
 
 2. **Clone the fork to your local machine:**
    ```bash
-   git clone https://github.com/Nishal77/SCS.git
+   git clone https://github.com/<your username>/SCS.git
    cd SCS
    ```
 
