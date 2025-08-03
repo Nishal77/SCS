@@ -25,14 +25,15 @@ const useTodaySpecialData = () => {
                             email_name
                         )
                     `)
+                    .eq('is_todays_special', true)
                     .order('created_at', { ascending: false });
                 
                 if (error) throw error;
                 
-                // Get first 6 items for today's special
-                let formattedProducts = data.slice(0, 6).map(formatProductForUser);
+                // Format products for display
+                let formattedProducts = data.map(formatProductForUser);
                 
-                // If no products found, show empty state
+                // If no special products found, show empty state
                 if (formattedProducts.length === 0) {
                     formattedProducts = [];
                 }
@@ -223,7 +224,7 @@ const TodaysSpecial = () => {
         <div className="container mx-auto">
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
-              <p className="text-gray-500 text-sm">No special items available today.</p>
+              <p className="text-gray-500 text-sm">No special items marked for today. Check back later!</p>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import {
     LayoutDashboard, Utensils, ShoppingCart, Users, MessageSquare, Settings2, LogOut,
     BadgeCheck, Bell, CreditCard, Sparkles, BarChart3, TrendingUp
 } from 'lucide-react';
+import IndianClock from './IndianClock';
 
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -123,9 +124,12 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
         <aside className={`fixed lg:relative inset-y-0 left-0 z-50 w-64 bg-gray-50 h-full flex flex-col border-r border-gray-200 shadow-sm transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
             <div className="flex items-center justify-between p-3 border-b border-gray-200">
                 <CompanyProfile />
-                <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-800">
-                    <X size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <IndianClock />
+                    <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-800">
+                        <X size={20} />
+                    </button>
+                </div>
             </div>
             <div className="flex-grow py-3 overflow-y-auto">
                 <NavSection title="Main Menu">
@@ -192,7 +196,12 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
                 </NavSection>
 
                 <NavSection title="Quick Actions">
-                    <NavItem icon={PenTool} label="Today's Special" />
+                    <NavItem 
+                        icon={PenTool} 
+                        label="Today's Special" 
+                        isActive={currentPage === 'todays-special'}
+                        onClick={() => handlePageChange('todays-special')}
+                    />
                     <NavItem 
                         icon={Clock} 
                         label="Inventory" 

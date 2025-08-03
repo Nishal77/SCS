@@ -6,6 +6,7 @@ import Inventory from './product/inventory';
 import UserDropdown from './components/user-dropdown';
 import { Menu } from 'lucide-react';
 import ProductItems from './product/items';
+import TodaysSpecial from './components/todays-special';
 
 export default function StaffDashboardMain() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,6 +42,8 @@ export default function StaffDashboardMain() {
                 return <Inventory />;
             case 'product':
                 return <ProductItems />;
+            case 'todays-special':
+                return <TodaysSpecial />;
             default:
                 return <Dashboard />;
         }

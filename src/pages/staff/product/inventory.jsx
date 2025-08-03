@@ -9,59 +9,90 @@ import {
     Plus, Download, Settings2, SlidersHorizontal, ArrowUpDown, Table, BarChart2,
     Trash2, Edit, X, TrendingUp, Clock, User, CreditCard, CheckCircle, 
     XCircle, AlertCircle, Package, Phone, MapPin, Calendar, DollarSign, Search,
-    Filter, Upload, Eye, EyeOff, Tag, Image as ImageIcon
+    Filter, Upload, Eye, EyeOff, Tag, Image as ImageIcon, Star
 } from 'lucide-react';
 import { formatImageUrl, formatProductForUser } from '@/lib/image-utils';
 import supabase from '@/lib/supabase';
 import ImageUpload from '@/components/ImageUpload';
+import IndianClock from '../components/IndianClock';
 
 
 // --- Reusable Components ---
 
 // Header Component
-const Header = () => (
-    <header className="flex justify-between items-center mb-6">
+const Header = ({ onRefresh }) => (
+    <header className="flex justify-between items-center mb-8">
         <div>
-            <h1 className="text-3xl font-bold text-gray-800">Inventory Management</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage all canteen products, prices, and availability</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventory Management</h1>
+            <p className="text-gray-600">Manage all canteen products, prices, and availability</p>
         </div>
         <div className="flex items-center gap-4">
+            <IndianClock />
             <div className="flex items-center gap-2 text-gray-500">
-                <button className="p-2 rounded-full hover:bg-gray-100"><Download size={20} /></button>
-                <button className="p-2 rounded-full hover:bg-gray-100"><Settings2 size={20} /></button>
                 <div className="flex -space-x-2">
                     <img src="https://placehold.co/32x32/EFEFEF/333?text=S" className="w-8 h-8 rounded-full border-2 border-white" alt="staff 1"/>
                     <img src="https://placehold.co/32x32/EFEFEF/333?text=C" className="w-8 h-8 rounded-full border-2 border-white" alt="staff 2"/>
                 </div>
             </div>
-            <button className="flex items-center gap-2 bg-white text-gray-700 font-semibold px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100">
-                <Settings2 size={16} />
-                <span>Settings</span>
+            <button className="flex items-center gap-2 bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-sm">
+                <Download size={16} />
+                <span>Extract Data (Monthly)</span>
             </button>
         </div>
     </header>
 );
 
 // Stat Card Component
-const StatCard = ({ title, value, change, changeType, icon: Icon }) => (
-    <div className="bg-white p-5 rounded-xl border border-gray-200/80 flex-1 shadow-sm">
-        <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-500">{title}</p>
-                <div className="flex items-end gap-2 mt-1">
-                    <p className="text-3xl font-bold text-gray-800">{value}</p>
-                    <div className={`flex items-center gap-1 text-xs font-semibold ${changeType === 'increase' ? 'text-green-500' : 'text-red-500'}`}>
-                        <TrendingUp size={14} />
-                        <span>{change}</span>
-                    </div>
-                </div>
+const StatCard = ({ title, value, change, changeType, icon: Icon, color = "default", subtitle = null }) => {
+    const getColorClasses = () => {
+        switch (color) {
+            case "red":
+                return {
+                    value: "text-red-600",
+                    change: "text-red-500",
+                    dot: "bg-red-500"
+                };
+            case "orange":
+                return {
+                    value: "text-orange-600",
+                    change: "text-orange-500",
+                    dot: "bg-orange-500"
+                };
+            case "green":
+                return {
+                    value: "text-gray-800",
+                    change: "text-green-500",
+                    dot: "bg-green-500"
+                };
+            default:
+                return {
+                    value: "text-gray-800",
+                    change: "text-green-500",
+                    dot: "bg-green-500"
+                };
+        }
+    };
+
+    const colors = getColorClasses();
+
+    return (
+        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 relative">
+            {/* Live indicator in top right */}
+            <div className={`absolute top-2 right-2 flex items-center gap-1.5 text-sm font-medium ${colors.change}`}>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${colors.dot}`}></div>
+                <span className="tracking-wide">{change}</span>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-                <Icon size={24} className="text-gray-600" />
+            
+            <div className="flex flex-col">
+                <p className="text-sm font-semibold text-gray-600 mb-2">{title}</p>
+                <p className={`text-3xl font-bold ${colors.value}`}>{value}</p>
+                {subtitle && title !== "Out of Stock" && (
+                    <p className="text-xs text-gray-500 mt-1 leading-tight">{subtitle}</p>
+                )}
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 // Status Badge Component - Shows stock information
 const StatusBadge = ({ stockAvailable, stockConstant }) => {
@@ -233,7 +264,8 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
     const filters = [
         { id: 'all', label: 'Menu All', icon: '🍽️' },
         { id: 'category', label: 'Category', icon: '📂' },
-        { id: 'special', label: "Today's Special", icon: '⭐' }
+        { id: 'veg', label: 'Vegetarian', icon: '🥬' },
+        { id: 'non-veg', label: 'Non-Vegetarian', icon: '🍗' }
     ];
 
     const categories = ['All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages', 'Desserts'];
@@ -247,17 +279,17 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
     };
 
     return (
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm mb-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
             <div className="flex flex-col gap-4">
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
                     {filters.map((filter) => (
                         <button
                             key={filter.id}
                             onClick={() => handleFilterClick(filter.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
                                 activeFilter === filter.id
                                     ? 'bg-orange-500 text-white border-orange-500 shadow-md'
-                                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                             }`}
                         >
                             <span className="text-lg">{filter.icon}</span>
@@ -273,7 +305,7 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
                         <select
                             value={selectedCategory}
                             onChange={handleCategoryChange}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
                         >
                             {categories.map(category => (
                                 <option key={category} value={category}>
@@ -294,16 +326,16 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
         name: product?.item_name || '',
         description: product?.description || '',
         price: product?.price || '',
-        category: product?.category || 'Snacks',
-        image: product?.image_url || '',
+        category: product?.category || '',
         deliveryTime: product?.min_to_cook || '',
         stockConstant: product?.stock_constant || '',
-        stockAvailable: product?.stock_available || '',
+        isTodaysSpecial: product?.is_todays_special || false,
+        foodType: product?.food_type || 'veg',
+        image: product?.image_url || ''
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // All fields required including image
         if (!formData.name || !formData.description || !formData.price || !formData.category || !formData.deliveryTime || !formData.stockConstant || !formData.image) {
             alert('All fields are required including product image.');
             return;
@@ -323,140 +355,265 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800">
-                        {mode === 'add' ? 'Add New Product' : 'Edit Product'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X size={24} />
-                    </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+                {/* Header */}
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-8 py-6 rounded-t-2xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-1">
+                                {mode === 'add' ? 'Add New Product' : 'Edit Product'}
+                            </h2>
+                            <p className="text-gray-500">Fill in the details to {mode === 'add' ? 'add' : 'update'} your product</p>
+                        </div>
+                        <button 
+                            onClick={onClose} 
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                        >
+                            <X size={24} className="text-gray-400 hover:text-gray-600" />
+                        </button>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
-                            />
+                {/* Form Content */}
+                <div className="p-8">
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        {/* Basic Information Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">1</span>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900">Basic Information</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Product Name</label>
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                        placeholder="Enter product name"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Price (₹)</label>
+                                    <input
+                                        type="number"
+                                        name="price"
+                                        value={formData.price}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                        placeholder="0.00"
+                                        required
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Category</label>
+                                    <select
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                        required
+                                    >
+                                        <option value="">Select Category</option>
+                                        <option value="Breakfast">Breakfast</option>
+                                        <option value="Lunch">Lunch</option>
+                                        <option value="Dinner">Dinner</option>
+                                        <option value="Snacks">Snacks</option>
+                                        <option value="Beverages">Beverages</option>
+                                        <option value="Desserts">Desserts</option>
+                                    </select>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Food Type</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:border-green-300 transition-colors duration-200 bg-gray-50 hover:bg-white">
+                                            <input
+                                                type="radio"
+                                                name="foodType"
+                                                value="veg"
+                                                checked={formData.foodType === 'veg'}
+                                                onChange={handleChange}
+                                                className="w-4 h-4 text-green-500 border-gray-300 focus:ring-green-500"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-700">Vegetarian</span>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:border-red-300 transition-colors duration-200 bg-gray-50 hover:bg-white">
+                                            <input
+                                                type="radio"
+                                                name="foodType"
+                                                value="non-veg"
+                                                checked={formData.foodType === 'non-veg'}
+                                                onChange={handleChange}
+                                                className="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-500"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-700">Non-Vegetarian</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
-                            <input
-                                type="number"
-                                name="price"
-                                value={formData.price}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
-                                min="0"
-                                step="0.01"
-                            />
+
+                        {/* Stock & Delivery Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">2</span>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900">Stock & Delivery</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Delivery Time (min)</label>
+                                    <input
+                                        type="number"
+                                        name="deliveryTime"
+                                        value={formData.deliveryTime}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                        placeholder="0"
+                                        required
+                                        min="0"
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">Total Stock</label>
+                                    <input
+                                        type="number"
+                                        name="stockConstant"
+                                        value={formData.stockConstant}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                        placeholder="Total stock available"
+                                        required
+                                        min="0"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Available stock will be automatically calculated based on customer orders
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
+
+                        {/* Description Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">3</span>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900">Description</h3>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="block text-sm font-semibold text-gray-700">Product Description</label>
+                                <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    rows="4"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white resize-none"
+                                    placeholder="Describe your product..."
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Special Features Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-8 h-8 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">4</span>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900">Special Features</h3>
+                            </div>
+                            
+                            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl p-6">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="isTodaysSpecial"
+                                        checked={formData.isTodaysSpecial}
+                                        onChange={(e) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                isTodaysSpecial: e.target.checked
+                                            }));
+                                        }}
+                                        className="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500 mt-0.5"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-semibold text-gray-900">Mark as Today's Special</span>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            This item will appear in the "Hot Picks of the Day" section on the user dashboard
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Image Upload Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">5</span>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900">Product Image</h3>
+                            </div>
+                            
+                            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-orange-400 transition-colors duration-200">
+                                <ImageUpload
+                                    onImageUpload={(imageUrl) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            image: imageUrl
+                                        }));
+                                    }}
+                                    currentImageUrl={formData.image}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-100">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                             >
-                                <option value="">Select Category</option>
-                                <option value="Breakfast">Breakfast</option>
-                                <option value="Lunch">Lunch</option>
-                                <option value="Dinner">Dinner</option>
-                                <option value="Snacks">Snacks</option>
-                                <option value="Beverages">Beverages</option>
-                                <option value="Desserts">Desserts</option>
-                            </select>
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                                {mode === 'add' ? 'Add Product' : 'Update Product'}
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time (min)</label>
-                            <input
-                                type="number"
-                                name="deliveryTime"
-                                value={formData.deliveryTime}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
-                                min="0"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity</label>
-                            <input
-                                type="number"
-                                name="stockConstant"
-                                value={formData.stockConstant}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
-                                min="0"
-                                placeholder="Total stock available"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Available Stock</label>
-                            <input
-                                type="number"
-                                name="stockAvailable"
-                                value={formData.stockAvailable}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                required
-                                min="0"
-                                placeholder="Currently available"
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
-                            <ImageUpload
-                                onImageUpload={(imageUrl) => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        image: imageUrl
-                                    }));
-                                }}
-                                currentImageUrl={formData.image}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                        <textarea
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows="3"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            placeholder="Product description..."
-                            required
-                        />
-                    </div>
-                    <div className="flex items-center justify-end gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                        >
-                            {mode === 'add' ? 'Add Product' : 'Update Product'}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );
@@ -474,6 +631,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
     const [error, setError] = useState(null);
     const [activeFilter, setActiveFilter] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
+    const [lastRefresh, setLastRefresh] = useState(new Date());
 
     // Fetch inventory from Supabase - defined with useCallback to avoid recreation
     const fetchInventory = useCallback(async () => {
@@ -493,13 +651,32 @@ const InventoryTable = ({ onStatsUpdate }) => {
             
             if (error) throw error;
             setProducts(data || []);
+            setLastRefresh(new Date());
             
-            // Calculate stats
+            // Calculate real-time stats
+            const totalProducts = data?.length || 0;
+            const totalValue = data?.reduce((sum, item) => sum + parseFloat(item.price || 0), 0) || 0;
+            const inStock = data?.filter(item => (item.stock_available || 0) > 0).length || 0;
+            const lowStock = data?.filter(item => (item.stock_available || 0) <= 10 && (item.stock_available || 0) > 0).length || 0;
+            const outOfStock = data?.filter(item => (item.stock_available || 0) === 0).length || 0;
+            const vegItems = data?.filter(item => item.food_type === 'veg').length || 0;
+            const nonVegItems = data?.filter(item => item.food_type === 'non-veg').length || 0;
+            const todaysSpecial = data?.filter(item => item.is_todays_special).length || 0;
+            
+            // Get out of stock item names
+            const outOfStockItems = data?.filter(item => (item.stock_available || 0) === 0).map(item => item.item_name) || [];
+            const outOfStockText = outOfStockItems.length > 0 ? outOfStockItems.join(', ') : null;
+            
             const inventoryStats = {
-                total: data?.length || 0,
-                inStock: data?.filter(item => item.stock_available > 0).length || 0,
-                lowStock: data?.filter(item => item.stock_available <= 10 && item.stock_available > 0).length || 0,
-                outOfStock: data?.filter(item => item.stock_available === 0).length || 0
+                totalProducts,
+                totalValue: totalValue.toFixed(2),
+                inStock,
+                lowStock,
+                outOfStock,
+                vegItems,
+                nonVegItems,
+                todaysSpecial,
+                outOfStockItems: outOfStockText
             };
             
             if (onStatsUpdate) {
@@ -516,6 +693,15 @@ const InventoryTable = ({ onStatsUpdate }) => {
     // Initial data fetch
     useEffect(() => {
         fetchInventory();
+    }, [fetchInventory]);
+
+    // Set up real-time refresh every 30 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchInventory();
+        }, 30000); // Refresh every 30 seconds
+
+        return () => clearInterval(interval);
     }, [fetchInventory]);
 
     useEffect(() => {
@@ -545,12 +731,13 @@ const InventoryTable = ({ onStatsUpdate }) => {
                     filtered = products.sort((a, b) => a.category.localeCompare(b.category));
                 }
                 break;
-            case 'special':
-                // Show today's special (products with higher stock or recent additions)
-                filtered = products.filter(product => 
-                    (product.stock_available > 0) || 
-                    (new Date(product.created_at).toDateString() === new Date().toDateString())
-                );
+            case 'veg':
+                // Show only vegetarian items
+                filtered = products.filter(product => product.food_type === 'veg');
+                break;
+            case 'non-veg':
+                // Show only non-vegetarian items
+                filtered = products.filter(product => product.food_type === 'non-veg');
                 break;
             case 'all':
             default:
@@ -614,7 +801,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
             console.log('Added by user ID:', addedBy);
 
             if (modalMode === 'add') {
-                // Add new product
+                // Add new product - set initial available stock equal to total stock
                 const { data: newProduct, error } = await supabase
                     .from('inventory')
                     .insert({
@@ -623,9 +810,11 @@ const InventoryTable = ({ onStatsUpdate }) => {
                         price: parseFloat(formData.price),
                         category: formData.category,
                         image_url: formData.image || '',
-                        min_to_cook: parseInt(formData.min_to_cook) || 0,
-                        stock_constant: parseInt(formData.stock_constant) || 0,
-                        stock_available: parseInt(formData.stock_available) || 0,
+                        min_to_cook: parseInt(formData.deliveryTime) || 0,
+                        stock_constant: parseInt(formData.stockConstant) || 0,
+                        stock_available: parseInt(formData.stockConstant) || 0, // Initially equal to total stock
+                        is_todays_special: formData.isTodaysSpecial || false,
+                        food_type: formData.foodType || 'veg',
                         added_by: addedBy
                     })
                     .select()
@@ -635,7 +824,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 setProducts(prev => [newProduct, ...prev]);
                 console.log('Product added successfully:', newProduct);
             } else if (editingProduct) {
-                // Update existing product
+                // Update existing product - don't change available stock, let system manage it
                 const { data: updatedProduct, error } = await supabase
                     .from('inventory')
                     .update({
@@ -644,9 +833,11 @@ const InventoryTable = ({ onStatsUpdate }) => {
                         price: parseFloat(formData.price),
                         category: formData.category,
                         image_url: formData.image || '',
-                        min_to_cook: parseInt(formData.min_to_cook) || 0,
-                        stock_constant: parseInt(formData.stock_constant) || 0,
-                        stock_available: parseInt(formData.stock_available) || 0
+                        min_to_cook: parseInt(formData.deliveryTime) || 0,
+                        stock_constant: parseInt(formData.stockConstant) || 0,
+                        // stock_available remains unchanged - managed by system
+                        is_todays_special: formData.isTodaysSpecial || false,
+                        food_type: formData.foodType || 'veg'
                     })
                     .eq('id', editingProduct.id)
                     .select()
@@ -720,27 +911,19 @@ const InventoryTable = ({ onStatsUpdate }) => {
             )}
             
             {/* Table Toolbar */}
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-2 text-gray-700 font-semibold px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-100">
-                        <Table size={16} /> Table View
-                    </button>
-                    <button className="flex items-center gap-2 text-gray-700 font-semibold">
-                        <SlidersHorizontal size={16} /> Filter
-                    </button>
-                    <button className="flex items-center gap-2 text-gray-700 font-semibold">
-                        <ArrowUpDown size={16} /> Sort
-                    </button>
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-lg">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="font-medium">Last updated: {lastRefresh.toLocaleTimeString()}</span>
+                    </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-2 text-gray-700 font-semibold">
-                        <Download size={16} /> Export
-                    </button>
                     <button 
                         onClick={handleAddProduct}
-                        className="flex items-center gap-2 bg-orange-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                        className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
-                        <Plus size={16} /> Add Product
+                        <Plus size={18} /> Add Product
                     </button>
                 </div>
             </div>
@@ -789,7 +972,18 @@ const InventoryTable = ({ onStatsUpdate }) => {
                                             onEdit={() => handleEditProduct(product)}
                                         />
                                         <div>
-                                            <p className="font-bold text-gray-800">{product.item_name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-gray-800">{product.item_name}</p>
+                                                {product.food_type && (
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                                        product.food_type === 'veg' 
+                                                            ? 'bg-green-100 text-green-700 border border-green-200' 
+                                                            : 'bg-red-100 text-red-700 border border-red-200'
+                                                    }`}>
+                                                        {product.food_type === 'veg' ? '🥬 Veg' : '🍗 Non-Veg'}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-gray-500">{product.description || 'No description'}</p>
                                             <p className="text-xs text-gray-400">{product.min_to_cook || 0} mins</p>
                                         </div>
@@ -872,74 +1066,104 @@ const InventoryTable = ({ onStatsUpdate }) => {
 export default function Inventory() {
     const [stats, setStats] = useState({
         totalProducts: 0,
-        totalValue: '0',
-        lowStockItems: 0,
-        outOfStockItems: 0
+        totalValue: '0.00',
+        inStock: 0,
+        lowStock: 0,
+        outOfStock: 0,
+        vegItems: 0,
+        nonVegItems: 0,
+        todaysSpecial: 0,
+        outOfStockItems: null
     });
 
-    // Fetch stats on component mount
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('inventory')
-                    .select('*');
-                
-                if (error) throw error;
-                
-                const inventoryStats = {
-                    totalProducts: data?.length || 0,
-                    totalValue: data?.reduce((sum, item) => sum + parseFloat(item.price || 0), 0).toFixed(2) || '0',
-                    lowStockItems: data?.filter(item => item.stock_available <= 10 && item.stock_available > 0).length || 0,
-                    outOfStockItems: data?.filter(item => item.stock_available === 0).length || 0
-                };
-                
-                setStats(inventoryStats);
-            } catch (err) {
-                console.error('Error fetching stats:', err);
-            }
-        };
-        fetchStats();
-    }, []);
+    // Update stats when inventory changes
+    const handleStatsUpdate = (newStats) => {
+        setStats(newStats);
+    };
+
+    // Handle manual refresh
+    const handleRefresh = () => {
+        // This will trigger a refresh of the inventory table
+        // The InventoryTable component will handle the actual refresh
+        console.log('Manual refresh triggered');
+    };
 
     return (
-        <div className="bg-gray-100 min-h-screen font-sans p-6">
-            <Header />
-            
-            {/* Statistics Cards */}
-            <div className="flex flex-col lg:flex-row gap-6 mb-6">
-                <StatCard 
-                    title="Total Products" 
-                    value={stats.totalProducts} 
-                    change="Live" 
-                    changeType="increase" 
-                    icon={Package}
-                />
-                <StatCard 
-                    title="Total Value" 
-                    value={`₹${stats.totalValue}`} 
-                    change="Live" 
-                    changeType="increase" 
-                    icon={DollarSign}
-                />
-                <StatCard 
-                    title="Low Stock" 
-                    value={stats.lowStockItems} 
-                    change="Live" 
-                    changeType="decrease" 
-                    icon={AlertCircle}
-                />
-                <StatCard 
-                    title="Out of Stock" 
-                    value={stats.outOfStockItems} 
-                    change="Live" 
-                    changeType="increase" 
-                    icon={XCircle}
-                />
+        <div className="bg-gray-50 min-h-screen font-sans p-6">
+            <div className="max-w-7xl mx-auto">
+                <Header onRefresh={handleRefresh} />
+                
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8">
+                    <StatCard 
+                        title="Total Products" 
+                        value={stats.totalProducts} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={Package}
+                        color="green"
+                    />
+                    <StatCard 
+                        title="Total Value" 
+                        value={`₹${stats.totalValue}`} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={DollarSign}
+                        color="green"
+                    />
+                    <StatCard 
+                        title="In Stock" 
+                        value={stats.inStock} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={CheckCircle}
+                        color="green"
+                    />
+                    <StatCard 
+                        title="Low Stock" 
+                        value={stats.lowStock} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={AlertCircle}
+                        color="orange"
+                    />
+                    <StatCard 
+                        title="Out of Stock" 
+                        value={stats.outOfStock} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={XCircle}
+                        color="red"
+                    />
+                    <StatCard 
+                        title="Vegetarian" 
+                        value={stats.vegItems} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={Package}
+                        color="green"
+                    />
+                    <StatCard 
+                        title="Non-Vegetarian" 
+                        value={stats.nonVegItems} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={Package}
+                        color="green"
+                    />
+                    <StatCard 
+                        title="Today's Special" 
+                        value={stats.todaysSpecial} 
+                        change="Live" 
+                        changeType="increase" 
+                        icon={Star}
+                        color="green"
+                    />
+                </div>
+                
+                {/* Inventory Table */}
+                <InventoryTable onStatsUpdate={handleStatsUpdate} />
             </div>
-            
-            {/* Inventory Table */}
-            <InventoryTable onStatsUpdate={setStats} />
         </div>
     );
 } 

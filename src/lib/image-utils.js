@@ -1,5 +1,10 @@
 // Simple utility functions for image handling and common operations
 
+// Generate random rating between 3.8 and 4.9
+export const generateRandomRating = () => {
+    return Math.round((Math.random() * (4.9 - 3.8) + 3.8) * 10) / 10;
+};
+
 // Format image URLs from various sources (Unsplash, Pixabay, direct URLs)
 export const formatImageUrl = (imageUrl) => {
     if (!imageUrl || imageUrl.trim() === '') {
@@ -80,7 +85,7 @@ export const formatProductForUser = (product) => {
         category: product.category,
         image: formatImageUrl(product.image_url),
         deliveryTime: `${product.min_to_cook} mins`,
-        rating: 4.5,
+        rating: generateRandomRating(),
         cuisine: product.category,
         stockAvailable: product.stock_available || 0,
         stockConstant: product.stock_constant || 0,
