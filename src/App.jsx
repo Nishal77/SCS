@@ -83,7 +83,7 @@ function App() {
         } />
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/sign-up" element={<Login />} />
-        <Route path="/" element={<Navigate to="/auth/login" replace />} />
+        <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
         {/* Add more routes here as needed */}
       </Routes>
     </Router>

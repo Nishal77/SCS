@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { AgGauge } from "ag-charts-react";
-import "ag-charts-enterprise";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 const PERFORMANCE_VALUES = {
   Day: 85,
@@ -12,54 +11,15 @@ export default function SalesPerformanceGauge() {
   const [period, setPeriod] = useState("Day");
   const value = PERFORMANCE_VALUES[period];
 
-  const options = {
-    type: "radial-gauge",
-    value,
-    scale: {
-      min: 0,
-      max: 100,
-    },
-    segmentation: {
-      enabled: true,
-      interval: {
-        count: 4,
-      },
-      spacing: 2,
-    },
-    label: {
-      fontSize: 24, // Further reduce the central value font size
-      color: '#222',
-      fontWeight: '600',
-      fontFamily: 'Inter, sans-serif',
-    },
-    // Make the gauge look more modern and "wow"
-    needle: {
-      enabled: false,
-    },
-    track: {
-      width: 0.18,
-      color: '#f3f4f6',
-    },
-    fill: {
-      colors: [
-        '#22c55e', // green
-        '#eab308', // yellow
-        '#f59e42', // orange
-        '#fb7185', // red
-        '#e5e7eb', // gray
-      ],
-    },
-    animation: {
-      enabled: true,
-      duration: 600,
-    },
-    padding: { top: 0, bottom: 0, left: 0, right: 0 },
-    margin: { top: 0, bottom: 0, left: 0, right: 0 },
-  };
+  // Create data for the pie chart to simulate a gauge
+  const data = [
+    { name: 'value', value: value, fill: '#f97316' }, // Orange for the value
+    { name: 'remaining', value: 100 - value, fill: '#f3f4f6' } // Gray for remaining
+  ];
 
   return (
     <div className="flex flex-col items-center w-full" style={{marginBottom: 0, paddingBottom: 0}}>
-      <div className="flex gap-2 mb-0">
+      <div className="flex gap-2 mb-4">
         {Object.keys(PERFORMANCE_VALUES).map((label) => (
           <button
             key={label}
@@ -75,8 +35,32 @@ export default function SalesPerformanceGauge() {
           </button>
         ))}
       </div>
-      <div className="flex justify-center items-center w-full" style={{marginBottom: 0, paddingBottom: 0}}>
-        <AgGauge options={options} style={{ width: 300, height: 180, maxWidth: '100%', marginBottom: 0, paddingBottom: 0 }} />
+      
+      <div className="relative flex justify-center items-center w-full" style={{marginBottom: 0, paddingBottom: 0}}>
+        <ResponsiveContainer width={300} height={180}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              startAngle={180}
+              endAngle={0}
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        
+        {/* Center text showing the value */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-3xl font-bold text-gray-800">{value}%</div>
+          <div className="text-sm text-gray-500 mt-1">Performance</div>
+        </div>
       </div>
     </div>
   );

@@ -1,27 +1,54 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Star, ChevronDown, SlidersHorizontal, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { handleAddToCart } from '../../lib/auth-utils';
+import { formatProductForUser, isProductAvailable } from '../../lib/image-utils';
+import supabase from '../../lib/supabase';
 
-// --- Mock Data ---
-// Removed 'offer' from each restaurant object
-const allRestaurants = [
-    { name: 'Burger King', image: 'https://images.unsplash.com/photo-1606131731446-5568d87113aa?q=80&w=1964&auto=format&fit=crop', rating: 4.6, deliveryTime: '30-35 mins', cuisine: 'Burgers, American', type: 'non-veg', price: 159 },
-    { name: 'Green Leaf Eatery', image: 'https://images.unsplash.com/photo-1551218808-94e220e084d2?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '20-25 mins', cuisine: 'Salads, Healthy', type: 'veg', price: 220 },
-    { name: 'Subway', image: 'https://images.unsplash.com/photo-1528738432978-dc3781469625?q=80&w=1964&auto=format&fit=crop', rating: 4.5, deliveryTime: '25-30 mins', cuisine: 'Sandwiches, Salads', type: 'both', price: 250 },
-    { name: 'Dosa Palace', image: 'https://images.unsplash.com/photo-1668438745582-788399184055?q=80&w=1974&auto=format&fit=crop', rating: 4.7, deliveryTime: '25-30 mins', cuisine: 'South Indian', type: 'veg', price: 180 },
-    { name: 'Pizza Central', image: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?q=80&w=1974&auto=format&fit=crop', rating: 4.4, deliveryTime: '30-35 mins', cuisine: 'Pizza, Italian', type: 'both', price: 199 },
-    { name: 'Kebabsville', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '35-40 mins', cuisine: 'Kebab, North Indian', type: 'non-veg', price: 320 },
-    { name: 'Pure Veggies', image: 'https://images.unsplash.com/photo-1627662388842-8d34b3f4db9a?q=80&w=1974&auto=format&fit=crop', rating: 4.9, deliveryTime: '20-25 mins', cuisine: 'North Indian, Thali', type: 'veg', price: 280 },
-    { name: 'Smoky Grills', image: 'https://images.unsplash.com/photo-1626082933433-22b46a48f349?q=80&w=2070&auto=format&fit=crop', rating: 4.5, deliveryTime: '40-45 mins', cuisine: 'BBQ, Steak', type: 'non-veg', price: 450 },
-    // 8 more restaurants (with updated live images)
-    { name: 'Wrap & Roll', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1974&auto=format&fit=crop', rating: 4.3, deliveryTime: '20-25 mins', cuisine: 'Wraps, Fast Food', type: 'both', price: 120 },
-    { name: 'Juice Junction', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1974&auto=format&fit=crop', rating: 4.7, deliveryTime: '15-20 mins', cuisine: 'Juices, Beverages', type: 'veg', price: 90 },
-    { name: 'Chaat Bazaar', image: 'https://images.unsplash.com/photo-1506089676908-3592f7389d4d?q=80&w=1974&auto=format&fit=crop', rating: 4.6, deliveryTime: '18-22 mins', cuisine: 'Chaat, Street Food', type: 'veg', price: 110 },
-    { name: 'Tandoori Nights', image: 'https://images.unsplash.com/photo-1504674900247-ec6b0b1b798e?q=80&w=1974&auto=format&fit=crop', rating: 4.8, deliveryTime: '30-35 mins', cuisine: 'Tandoori, North Indian', type: 'non-veg', price: 350 },
-    { name: 'Pasta House', image: 'https://images.unsplash.com/photo-1504674900247-1a781979e8c0?q=80&w=1974&auto=format&fit=crop', rating: 4.4, deliveryTime: '25-30 mins', cuisine: 'Pasta, Italian', type: 'veg', price: 210 },
-    { name: 'Sushi Express', image: 'https://images.unsplash.com/photo-1504674900247-eca3a4b9b6b2?q=80&w=1974&auto=format&fit=crop', rating: 4.5, deliveryTime: '35-40 mins', cuisine: 'Sushi, Japanese', type: 'non-veg', price: 400 },
-    { name: 'Bakers Delight', image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?q=80&w=1974&auto=format&fit=crop', rating: 4.9, deliveryTime: '15-20 mins', cuisine: 'Bakery, Desserts', type: 'veg', price: 150 },
-    { name: 'Momo Street', image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?q=80&w=1974&auto=format&fit=crop', rating: 4.6, deliveryTime: '20-25 mins', cuisine: 'Momos, Asian', type: 'both', price: 130 },
-];
+// --- Real Data from Supabase ---
+const useInventoryData = () => {
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select(`
+                        *,
+                        profiles:added_by(
+                            id,
+                            name,
+                            email_name
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                let formattedProducts = data.map(formatProductForUser);
+                
+                // If no products found, show empty state
+                if (formattedProducts.length === 0) {
+                    formattedProducts = [];
+                }
+                setProducts(formattedProducts);
+            } catch (err) {
+                setError(err.message);
+                console.error('Error fetching products:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    return { products, loading, error };
+};
 
 // --- Filter Bar Component ---
 const FilterBar = () => {
@@ -42,14 +69,38 @@ const FilterBar = () => {
 };
 
 // --- Restaurant Card Component (with Price and Add button, offer removed) ---
-const RestaurantCard = ({ restaurant }) => (
+const RestaurantCard = ({ restaurant }) => {
+    const navigate = useNavigate();
+    
+    const handleAddClick = () => {
+        if (handleAddToCart(navigate)) {
+            // User is authenticated, proceed with adding to cart
+            console.log('Adding to cart:', restaurant.name);
+            // Add your cart logic here
+        }
+    };
+
+    // Check if product is available
+    const isAvailable = isProductAvailable(restaurant);
+
+    return (
     <div className="bg-slate-100 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out hover:scale-95 active:scale-90 group">
         <div className="relative">
             <img 
                 src={restaurant.image} 
                 alt={restaurant.name} 
                 className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-105" // reduced from h-48 to h-36
-                onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/300x200/F3F4F6/9CA3AF?text=Image+Not+Found'; }}
+                    onError={(e) => { 
+                        console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
+                        // Try to load a fallback image
+                        if (!e.target.dataset.fallbackAttempted) {
+                            e.target.dataset.fallbackAttempted = 'true';
+                            e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
+                        } else {
+                            // If fallback also fails, hide the image
+                            e.target.style.display = 'none';
+                        }
+                    }}
             />
             {/* Offer removed */}
         </div>
@@ -64,30 +115,43 @@ const RestaurantCard = ({ restaurant }) => (
             <p className="mt-1 text-gray-500 text-xs truncate">{restaurant.cuisine}</p> {/* mt-1.5 -> mt-1, text-sm -> text-xs */}
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between"> {/* mt-4 pt-4 -> mt-3 pt-3 */}
                 <p className="text-xl  font-extrabold text-black">₹{restaurant.price}</p> {/* text-xl -> text-lg */}
-                <button className="flex items-center gap-2 px-4 py-2 border-2 border-amber-500 text-amber-500 font-bold rounded-lg hover:bg-amber-500 hover:text-white transition-all duration-300 transform hover:scale-105">
+                    <button 
+                        onClick={handleAddClick}
+                        disabled={!isAvailable}
+                        className={`flex items-center gap-2 px-4 py-2 border-2 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                            isAvailable 
+                                ? 'border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white' 
+                                : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                        }`}
+                    >
                     <Plus className="w-5 h-5"/>
-                    ADD
+                        {isAvailable ? 'ADD' : 'OUT OF STOCK'}
                 </button>
             </div>
         </div>
     </div>
 );
+};
 
 // --- Main Restaurant Page Component ---
 export default function App() {
+    const { products, loading, error } = useInventoryData();
     const [dietaryFilter, setDietaryFilter] = useState('all'); // 'all', 'veg', 'non-veg'
 
     const filteredRestaurants = useMemo(() => {
+        if (loading) return [];
+        if (error) return [];
+        
         if (dietaryFilter === 'all') {
-            return allRestaurants;
+            return products;
         }
         if (dietaryFilter === 'veg') {
-            return allRestaurants.filter(r => r.type === 'veg' || r.type === 'both');
+            return products.filter(r => r.category.toLowerCase().includes('veg') || r.category.toLowerCase().includes('vegetarian'));
         }
         if (dietaryFilter === 'non-veg') {
-            return allRestaurants.filter(r => r.type === 'non-veg' || r.type === 'both');
+            return products.filter(r => !r.category.toLowerCase().includes('veg') && !r.category.toLowerCase().includes('vegetarian'));
         }
-    }, [dietaryFilter]);
+    }, [dietaryFilter, products, loading, error]);
 
     // Veg/Non-Veg Toggle Component (with perfected hover effects)
     const VegToggle = ({ filter, setFilter }) => {
@@ -121,13 +185,41 @@ export default function App() {
         );
     };
 
+    if (loading) {
+        return (
+            <div className="bg-gray-50 min-h-screen font-sans">
+                <div className="container mx-auto mt-12">
+                    <div className="flex justify-center items-center h-64">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+                            <p className="mt-4 text-gray-600">Loading menu items...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <div className="container mx-auto mt-12">
+                    <div className="flex justify-center items-center h-64">
+                        <div className="text-center">
+                            <p className="text-red-600">Error loading menu items: {error}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="font-sans">
+            <div className="container mx-auto">
                 {/* --- Header Section --- */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">	Explore the Menu</h1>
                         <p className="text-gray-600 mt-1">All {filteredRestaurants.length} Dishes</p>
                     </div>
                     <VegToggle filter={dietaryFilter} setFilter={setDietaryFilter} />
@@ -139,11 +231,17 @@ export default function App() {
                 </div>
 
                 {/* --- Restaurant Grid --- */}
+                {filteredRestaurants.length === 0 ? (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 text-lg">No menu items found.</p>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
                     {filteredRestaurants.map((restaurant) => (
-                        <RestaurantCard key={restaurant.name} restaurant={restaurant} />
+                            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
                     ))}
                 </div>
+                )}
             </div>
         </div>
     );

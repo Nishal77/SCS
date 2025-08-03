@@ -1,21 +1,55 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import supabase from '../../lib/supabase';
 
-// --- Data with Verified High-Quality Images ---
-const foodCategories = [
-    { name: 'Idli', image: 'https://images.unsplash.com/photo-1596889921594-a8c4aa069d24?q=80&w=2070&auto=format&fit=crop' },
-    { name: 'Vada', image: 'https://images.unsplash.com/photo-1643282333213-a40091c8d5a1?q=80&w=1964&auto=format&fit=crop' },
-    { name: 'Dosa', image: 'https://images.unsplash.com/photo-1668665632120-d3a3f5b08076?q=80&w=2070&auto=format&fit=crop' },
-    { name: 'Chole Bhature', image: 'https://plus.unsplash.com/premium_photo-1695863433321-f81d13f9f3f9?q=80&w=2070&auto=format&fit=crop' },
-    { name: 'Poori', image: 'https://plus.unsplash.com/premium_photo-1695863433154-7223901b8e4c?q=80&w=1968&auto=format&fit=crop' },
-    { name: 'Cakes', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=1987&auto=format&fit=crop' },
-    { name: 'Biryani', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=1974&auto=format&fit=crop' },
-    { name: 'Pizza', image: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?q=80&w=1928&auto=format&fit=crop' },
-    { name: 'Rolls', image: 'https://images.unsplash.com/photo-1625220194771-49bdda222896?q=80&w=2070&auto=format&fit=crop' },
-    { name: 'Thali', image: 'https://images.unsplash.com/photo-1565557623262-b27e252489a9?q=80&w=1965&auto=format&fit=crop' },
-    { name: 'Noodles', image: 'https://images.unsplash.com/photo-1612927601601-66384216b3c6?q=80&w=1887&auto=format&fit=crop' },
-    { name: 'Shakes', image: 'https://images.unsplash.com/photo-1624827294958-3933c2a1353c?q=80&w=1887&auto=format&fit=crop' },
-];
+// --- Real Categories from Supabase ---
+const useCategoriesData = () => {
+    const [foodCategories, setFoodCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select('category')
+                    .order('category');
+                
+                if (error) throw error;
+                
+                // Get unique categories
+                const uniqueCategories = [...new Set(data.map(item => item.category))];
+                // Create category objects with default images
+                const categoryObjects = uniqueCategories.map(category => ({
+                    name: category,
+                    image: `https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop`
+                }));
+                
+                // If no categories found, add some default ones
+                if (categoryObjects.length === 0) {
+                    categoryObjects.push(
+                        { name: 'Breakfast', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop' },
+                        { name: 'Lunch', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=200&auto=format&fit=crop' },
+                        { name: 'Dinner', image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=200&auto=format&fit=crop' },
+                        { name: 'Snacks', image: 'https://images.unsplash.com/photo-1625220194771-49bdda222896?q=80&w=200&auto=format&fit=crop' }
+                    );
+                }
+                setFoodCategories(categoryObjects);
+            } catch (err) {
+                setError(err.message);
+                console.error('Error fetching categories:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    return { foodCategories, loading, error };
+};
 
 // --- Food Category Card Component ---
 const FoodCategoryCard = ({ category }) => (
@@ -34,6 +68,7 @@ const FoodCategoryCard = ({ category }) => (
 
 // --- Draggable Carousel Component ---
 const FoodCategoriesCarousel = () => {
+    const { foodCategories, loading, error } = useCategoriesData();
     const scrollContainerRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -73,10 +108,46 @@ const FoodCategoriesCarousel = () => {
         scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     };
 
+    if (loading) {
+        return (
+            <div className="w-full mx-auto py-12 mb-12">
+                <div className="flex justify-center items-center h-32">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                        <p className="mt-2 text-gray-600 text-sm">Loading categories...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="w-full mx-auto py-12 mb-12">
+                <div className="flex justify-center items-center h-32">
+                    <div className="text-center">
+                        <p className="text-red-600 text-sm">Error loading categories: {error}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (foodCategories.length === 0) {
+        return (
+            <div className="w-full mx-auto py-12 mb-12">
+                <div className="flex justify-center items-center h-32">
+                    <div className="text-center">
+                        <p className="text-gray-500 text-sm">No categories available.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="w-full mx-auto py-12 mb-12">
+        <div className="w-full">
             <div className="flex justify-between items-center mb-5">
-                <h2 className="text-3xl font-bold text-gray-800">Explore the Menu</h2>
                 <div className="flex space-x-2">
                     <button
                         onClick={() => scroll('left')}

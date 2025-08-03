@@ -1,0 +1,95 @@
+// Simple utility functions for image handling and common operations
+
+// Format image URLs from various sources (Unsplash, Pixabay, direct URLs)
+export const formatImageUrl = (imageUrl) => {
+    if (!imageUrl || imageUrl.trim() === '') {
+        return '';
+    }
+    
+    // If it's an Unsplash photo URL, convert it to proper image URL
+    if (imageUrl.includes('unsplash.com/photos/')) {
+        // For Unsplash URLs, we need to use a different approach
+        // The slug format has changed, so we'll use a fallback approach
+        // Try to extract a valid photo ID or use a default food image
+        
+        // First, try to extract the photo ID from the slug
+        const photoId = imageUrl.split('/photos/')[1];
+        
+        // If the photo ID looks like a valid Unsplash ID (alphanumeric, 11 chars)
+        if (photoId && /^[a-zA-Z0-9]{11}$/.test(photoId)) {
+            return `https://images.unsplash.com/photo-${photoId}?q=80&w=400&h=400&fit=crop`;
+        }
+        
+        // If it's a descriptive slug, try to extract the ID from the end
+        const actualPhotoId = photoId.split('-').pop();
+        if (actualPhotoId && /^[a-zA-Z0-9]{11}$/.test(actualPhotoId)) {
+            return `https://images.unsplash.com/photo-${actualPhotoId}?q=80&w=400&h=400&fit=crop`;
+        }
+        
+        // If we can't extract a valid ID, use a default food image
+        console.log(`⚠️ Could not extract valid Unsplash photo ID from: ${imageUrl}`);
+        return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
+    }
+    
+    // If it's a Pixabay photo URL, convert it to proper image URL
+    if (imageUrl.includes('pixabay.com/photos/')) {
+        // Extract the photo ID from Pixabay URL
+        // Format: https://pixabay.com/photos/biryani-indian-food-meal-dish-8563961/
+        const photoId = imageUrl.split('-').pop().replace('/', '');
+        
+        if (photoId && /^\d+$/.test(photoId)) {
+            // Pixabay direct image URL format
+            return `https://cdn.pixabay.com/photo/2023/01/01/00/00/biryani-${photoId}_1280.jpg`;
+        }
+        
+        // If we can't extract a valid ID, use a default food image
+        console.log(`⚠️ Could not extract valid Pixabay photo ID from: ${imageUrl}`);
+        return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
+    }
+    
+    // If it's already a proper image URL, return as is
+    if (imageUrl.startsWith('http') && (
+        imageUrl.includes('.jpg') || 
+        imageUrl.includes('.png') || 
+        imageUrl.includes('.jpeg') || 
+        imageUrl.includes('images.unsplash.com') ||
+        imageUrl.includes('cdn.pixabay.com') ||
+        imageUrl.includes('images.pexels.com')
+    )) {
+        return imageUrl;
+    }
+    
+    // If it's a Supabase storage URL, return as is
+    if (imageUrl.includes('supabase.co/storage/') || 
+        imageUrl.includes('supabase.co/') || 
+        imageUrl.includes('storage.googleapis.com') ||
+        imageUrl.includes('product-menu')) {
+        return imageUrl;
+    }
+    
+    return imageUrl;
+};
+
+// Format product data for user display
+export const formatProductForUser = (product) => {
+    return {
+        id: product.id,
+        name: product.item_name,
+        description: product.description,
+        price: parseFloat(product.price),
+        category: product.category,
+        image: formatImageUrl(product.image_url),
+        deliveryTime: `${product.min_to_cook} mins`,
+        rating: 4.5,
+        cuisine: product.category,
+        stockAvailable: product.stock_available || 0,
+        stockConstant: product.stock_constant || 0,
+        addedBy: product.profiles?.name || product.profiles?.email_name || 'Staff',
+        createdAt: product.created_at
+    };
+};
+
+// Check if product is available
+export const isProductAvailable = (product) => {
+    return product.stock_available > 0;
+}; 

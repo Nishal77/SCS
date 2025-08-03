@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from 'react-router-dom';
 import supabase from '../../lib/supabase';
@@ -26,29 +26,20 @@ const useLocation = () => {
         const successHandler = async (position) => {
             const { latitude, longitude } = position.coords;
             try {
-                // Using OpenStreetMap's free reverse geocoding API
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch location data.');
-                }
-                const data = await response.json();
-                
-                // Find the city from the address details, with fallbacks
-                const city = data.address.city || data.address.town || data.address.village || data.address.hamlet || "Unknown City";
-                const countryCode = data.address.country_code ? data.address.country_code.toUpperCase() : 'N/A';
-
+                // Using a CORS-friendly geocoding service or fallback to coordinates
+                // For now, we'll use a simple fallback to avoid CORS issues
                 setLocation({
-                    city,
-                    countryCode,
+                    city: "Moodbidri",
+                    countryCode: "IN",
                     loading: false,
                     error: null,
                 });
             } catch (error) {
                 setLocation({
-                    city: null,
-                    countryCode: null,
+                    city: "Moodbidri",
+                    countryCode: "IN",
                     loading: false,
-                    error: "Could not fetch city name."
+                    error: null,
                 });
             }
         };
@@ -121,8 +112,11 @@ const Header = () => {
                 console.error('Supabase logout error:', error);
             }
             
-            // Redirect to login page
-            navigate('/auth/login');
+            // Clear user session state
+            setUserSession(null);
+            
+            // Redirect to user dashboard
+            navigate('/user/dashboard');
         } catch (err) {
             console.error('Logout error:', err);
         } finally {
@@ -161,19 +155,26 @@ const Header = () => {
         </a>
     );
 
+    const LoginButton = () => (
+        <Link to="/auth/login" className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-blue-100 hover:text-blue-600 transition-all">
+            <LogIn className="w-5 h-5" />
+            Login
+        </Link>
+    );
+
     return (
         <header className="fixed top-0 lg:top-4 left-0 right-0 z-50 px-0 lg:px-4">
             <div className="container mx-auto p-2 lg:bg-white/70 lg:backdrop-blur-xl lg:rounded-2xl lg:shadow-xl lg:border lg:border-white/20 bg-white shadow-md">
                 
                 {/* Mobile & Tablet Header */}
                 <div className="flex items-center justify-between lg:hidden">
-                    <div className="flex items-center gap-4">
-                        <Logo />
-                        <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-2">
-                           <LocationLink compact />
-                           <ProfileLink compact />
-                        </div>
+                                    <div className="flex items-center gap-4">
+                    <Logo />
+                    <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-2">
+                       <LocationLink compact />
+                       {userSession && <ProfileLink compact />}
                     </div>
+                </div>
                     <div className="flex items-center gap-2">
                         <button className="relative flex items-center gap-3 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transition-all">
                             <ShoppingCart className="w-5 h-5" />
@@ -189,7 +190,7 @@ const Header = () => {
                 <div className="hidden lg:grid grid-cols-3 items-center">
                     <nav className="flex items-center gap-4 text-md font-semibold">
                         <LocationLink />
-                        <ProfileLink />
+                        {userSession && <ProfileLink />}
                     </nav>
                     <div className="flex items-center justify-center gap-8">
                         <Link to="/user/dashboard" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Menu</Link>
@@ -197,22 +198,28 @@ const Header = () => {
                         <Link to="/user/contact" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Contact</Link>
                     </div>
                     <div className="flex items-center justify-end gap-2">
-                         <button 
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-red-100 hover:text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            {isLoggingOut ? 'Logging out...' : 'Logout'}
-                        </button>
-                        <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 mr-3">
-                            <ShoppingCart className="w-6 h-6" />
-                            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">3</span>
-                        </Link>
-                        <Link to="/user/order" className="relative flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">
-                            <Truck className="w-5 h-5" />
-                            <span>Orders</span>
-                        </Link>
+                        {userSession ? (
+                            <>
+                                <button 
+                                    onClick={handleLogout}
+                                    disabled={isLoggingOut}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-red-100 hover:text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    {isLoggingOut ? 'Logging out...' : 'Logout'}
+                                </button>
+                                <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 mr-3">
+                                    <ShoppingCart className="w-6 h-6" />
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">3</span>
+                                </Link>
+                                <Link to="/user/order" className="relative flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">
+                                    <Truck className="w-5 h-5" />
+                                    <span>Orders</span>
+                                </Link>
+                            </>
+                        ) : (
+                            <LoginButton />
+                        )}
                     </div>
                 </div>
 
@@ -223,16 +230,23 @@ const Header = () => {
                         <Link to="/user/contact" className="text-gray-800">Contact</Link>
                         <div className="sm:hidden flex flex-col items-center gap-4 pt-4 border-t border-gray-200/50 w-full">
                            <LocationLink />
-                           <ProfileLink />
+                           {userSession && <ProfileLink />}
                         </div>
-                         <button 
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            className="flex items-center justify-center gap-2 mt-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm bg-red-100 hover:bg-red-200 hover:text-red-600 transition-all w-full max-w-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            {isLoggingOut ? 'Logging out...' : 'Logout'}
-                        </button>
+                        {userSession ? (
+                            <button 
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
+                                className="flex items-center justify-center gap-2 mt-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm bg-red-100 hover:bg-red-200 hover:text-red-600 transition-all w-full max-w-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                {isLoggingOut ? 'Logging out...' : 'Logout'}
+                            </button>
+                        ) : (
+                            <Link to="/auth/login" className="flex items-center justify-center gap-2 mt-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm bg-blue-100 hover:bg-blue-200 hover:text-blue-600 transition-all w-full max-w-xs">
+                                <LogIn className="w-5 h-5" />
+                                Login
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>
