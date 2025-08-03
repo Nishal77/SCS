@@ -173,14 +173,6 @@ docker-compose down
 docker-compose up -d --build
 ```
 
-### Available Scripts
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-```
-
 ## 🤝 Contributing
 
 We welcome contributions from the community! There are many ways to support and improve the Smart Canteen Management System (CMS) — and writing code is just one of them. Whether it’s fixing bugs, improving documentation, designing UI/UX, suggesting new features, or sharing feedback — every contribution counts.
