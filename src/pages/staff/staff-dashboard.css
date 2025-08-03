@@ -1,0 +1,54 @@
+/* Staff Dashboard - Local Font Declarations */
+@font-face {
+  font-family: 'Open Sans';
+  src: url('/src/assets/fonts/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Josefin Sans';
+  src: url('/src/assets/fonts/JosefinSans-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('/src/assets/fonts/Roboto-VariableFont_wdth,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Flex';
+  src: url('/src/assets/fonts/RobotoFlex-VariableFont_GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Staff Dashboard Specific Styles */
+.staff-dashboard {
+  font-family: "Open Sans", "Josefin Sans", "Roboto", "Roboto Flex", Arial, Helvetica, sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.staff-dashboard h1, 
+.staff-dashboard h2, 
+.staff-dashboard h3, 
+.staff-dashboard h4 {
+  font-family: "Open Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.staff-dashboard * {
+  font-family: "Open Sans", "Josefin Sans", "Roboto", "Roboto Flex", Arial, Helvetica, sans-serif;
+} 

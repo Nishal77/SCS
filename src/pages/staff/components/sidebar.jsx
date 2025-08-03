@@ -197,12 +197,6 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
 
                 <NavSection title="Quick Actions">
                     <NavItem 
-                        icon={PenTool} 
-                        label="Today's Special" 
-                        isActive={currentPage === 'todays-special'}
-                        onClick={() => handlePageChange('todays-special')}
-                    />
-                    <NavItem 
                         icon={Clock} 
                         label="Inventory" 
                         isActive={currentPage === 'inventory'}

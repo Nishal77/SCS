@@ -6,7 +6,7 @@ import Inventory from './product/inventory';
 import UserDropdown from './components/user-dropdown';
 import { Menu } from 'lucide-react';
 import ProductItems from './product/items';
-import TodaysSpecial from './components/todays-special';
+import './staff-dashboard.css';
 
 export default function StaffDashboardMain() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -42,15 +42,13 @@ export default function StaffDashboardMain() {
                 return <Inventory />;
             case 'product':
                 return <ProductItems />;
-            case 'todays-special':
-                return <TodaysSpecial />;
             default:
                 return <Dashboard />;
         }
     };
 
     return (
-        <div className="bg-gray-50 h-screen flex overflow-hidden">
+        <div className="staff-dashboard bg-gray-50 h-screen flex overflow-hidden">
             {/* Sidebar - Fixed on large screens */}
             <Sidebar 
                 isOpen={isSidebarOpen} 

@@ -76,16 +76,16 @@ const StatCard = ({ title, value, change, changeType, icon: Icon, color = "defau
     const colors = getColorClasses();
 
     return (
-        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 relative">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 relative">
             {/* Live indicator in top right */}
-            <div className={`absolute top-2 right-2 flex items-center gap-1.5 text-sm font-medium ${colors.change}`}>
+            <div className={`absolute top-3 right-3 flex items-center gap-1.5 text-sm font-medium ${colors.change}`}>
                 <div className={`w-2 h-2 rounded-full animate-pulse ${colors.dot}`}></div>
                 <span className="tracking-wide">{change}</span>
             </div>
             
             <div className="flex flex-col">
                 <p className="text-sm font-semibold text-gray-600 mb-2">{title}</p>
-                <p className={`text-3xl font-bold ${colors.value}`}>{value}</p>
+                <p className={`text-4xl font-bold ${colors.value}`}>{value}</p>
                 {subtitle && title !== "Out of Stock" && (
                     <p className="text-xs text-gray-500 mt-1 leading-tight">{subtitle}</p>
                 )}
@@ -114,7 +114,7 @@ const StatusBadge = ({ stockAvailable, stockConstant }) => {
     
     return (
         <div className="flex flex-col gap-1">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusStyles}`}>
+            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${statusStyles}`}>
                 {status}
             </span>
             <span className="text-xs text-gray-500">
@@ -135,7 +135,7 @@ const CategoryBadge = ({ category }) => {
         'Desserts': 'bg-indigo-100 text-indigo-700 border-indigo-200',
     };
     return (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${categoryStyles[category] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${categoryStyles[category] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
             {category}
         </span>
     );
@@ -145,80 +145,11 @@ const CategoryBadge = ({ category }) => {
 
 // Product Image Component
 const ProductImage = ({ image, name, onEdit }) => {
-    // Format the image URL for display
-    const formatImageUrl = (imageUrl) => {
-        if (!imageUrl || imageUrl.trim() === '') {
-            return '';
-        }
-        
-        // If it's an Unsplash photo URL, convert it to proper image URL
-        if (imageUrl.includes('unsplash.com/photos/')) {
-            // For Unsplash URLs, we need to use a different approach
-            // The slug format has changed, so we'll use a fallback approach
-            // Try to extract a valid photo ID or use a default food image
-            
-            // First, try to extract the photo ID from the slug
-            const photoId = imageUrl.split('/photos/')[1];
-            
-            // If the photo ID looks like a valid Unsplash ID (alphanumeric, 11 chars)
-            if (photoId && /^[a-zA-Z0-9]{11}$/.test(photoId)) {
-                return `https://images.unsplash.com/photo-${photoId}?q=80&w=400&h=400&fit=crop`;
-            }
-            
-            // If it's a descriptive slug, try to extract the ID from the end
-            const actualPhotoId = photoId.split('-').pop();
-            if (actualPhotoId && /^[a-zA-Z0-9]{11}$/.test(actualPhotoId)) {
-                return `https://images.unsplash.com/photo-${actualPhotoId}?q=80&w=400&h=400&fit=crop`;
-            }
-            
-            // If we can't extract a valid ID, use a default food image
-            console.log(`⚠️ Could not extract valid Unsplash photo ID from: ${imageUrl}`);
-            return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
-        }
-        
-        // If it's a Pixabay photo URL, convert it to proper image URL
-        if (imageUrl.includes('pixabay.com/photos/')) {
-            // Extract the photo ID from Pixabay URL
-            // Format: https://pixabay.com/photos/biryani-indian-food-meal-dish-8563961/
-            const photoId = imageUrl.split('-').pop().replace('/', '');
-            
-            if (photoId && /^\d+$/.test(photoId)) {
-                // Pixabay direct image URL format
-                return `https://cdn.pixabay.com/photo/2023/01/01/00/00/biryani-${photoId}_1280.jpg`;
-            }
-            
-            // If we can't extract a valid ID, use a default food image
-            console.log(`⚠️ Could not extract valid Pixabay photo ID from: ${imageUrl}`);
-            return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
-        }
-        
-        // If it's already a proper image URL, return as is
-        if (imageUrl.startsWith('http') && (
-            imageUrl.includes('.jpg') || 
-            imageUrl.includes('.png') || 
-            imageUrl.includes('.jpeg') || 
-            imageUrl.includes('images.unsplash.com') ||
-            imageUrl.includes('cdn.pixabay.com') ||
-            imageUrl.includes('images.pexels.com')
-        )) {
-            return imageUrl;
-        }
-        
-        // If it's a Supabase storage URL, return as is
-        if (imageUrl.includes('supabase.co/storage/')) {
-            return imageUrl;
-        }
-        
-        return imageUrl;
-    };
-    
-    const formattedImageUrl = formatImageUrl(image);
-    
-    // Only show image if it exists, no default fallback
-    if (!formattedImageUrl || formattedImageUrl.trim() === '') {
+    // Only show image if it exists
+    if (!image || image.trim() === '') {
         return (
-            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
-                <ImageIcon size={24} className="text-gray-400" />
+            <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                <ImageIcon size={20} className="text-gray-400" />
             </div>
         );
     }
@@ -226,34 +157,15 @@ const ProductImage = ({ image, name, onEdit }) => {
     return (
         <div className="relative group">
             <img 
-                src={formattedImageUrl} 
+                src={image} 
                 alt={name || 'Product'}
-                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                onError={(e) => { 
-                    console.log(`❌ Image failed to load for ${name}:`, formattedImageUrl);
-                    // Try to load a fallback image
-                    if (!e.target.dataset.fallbackAttempted) {
-                        e.target.dataset.fallbackAttempted = 'true';
-                        e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
-                    } else {
-                        // If fallback also fails, show placeholder
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                    }
-                }}
-                onLoad={(e) => {
-                    console.log(`✅ Image loaded successfully for ${name}:`, formattedImageUrl);
-                }}
+                className="w-14 h-14 rounded-lg object-cover border border-gray-200"
             />
-            {/* Fallback placeholder - hidden by default */}
-            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200 hidden">
-                <ImageIcon size={24} className="text-gray-400" />
-            </div>
             <button 
                 onClick={onEdit}
                 className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
             >
-                <ImageIcon size={16} className="text-white" />
+                <ImageIcon size={14} className="text-white" />
             </button>
         </div>
     );
@@ -265,7 +177,8 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
         { id: 'all', label: 'Menu All', icon: '🍽️' },
         { id: 'category', label: 'Category', icon: '📂' },
         { id: 'veg', label: 'Vegetarian', icon: '🥬' },
-        { id: 'non-veg', label: 'Non-Vegetarian', icon: '🍗' }
+        { id: 'non-veg', label: 'Non-Vegetarian', icon: '🍗' },
+        { id: 'special', label: "Today's Special", icon: '⭐' }
     ];
 
     const categories = ['All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages', 'Desserts'];
@@ -708,6 +621,13 @@ const InventoryTable = ({ onStatsUpdate }) => {
         setFilteredProducts(products);
     }, [products]);
 
+    // Apply current filter when products change
+    useEffect(() => {
+        if (products.length > 0) {
+            applyFilters(activeFilter, selectedCategory);
+        }
+    }, [products, activeFilter, selectedCategory]);
+
     const handleFilter = (filterType) => {
         setActiveFilter(filterType);
         applyFilters(filterType, selectedCategory);
@@ -721,28 +641,40 @@ const InventoryTable = ({ onStatsUpdate }) => {
     const applyFilters = (filterType, category) => {
         let filtered = products;
         
+        console.log('Applying filter:', filterType, 'Category:', category, 'Total products:', products.length);
+        
         switch (filterType) {
             case 'category':
                 // Filter by specific category if selected
                 if (category && category !== 'All Categories') {
                     filtered = products.filter(product => product.category === category);
+                    console.log('Category filter applied:', category, 'Filtered count:', filtered.length);
                 } else {
                     // Show all products grouped by category
                     filtered = products.sort((a, b) => a.category.localeCompare(b.category));
+                    console.log('All categories shown, sorted by category');
                 }
                 break;
             case 'veg':
                 // Show only vegetarian items
                 filtered = products.filter(product => product.food_type === 'veg');
+                console.log('Vegetarian filter applied, filtered count:', filtered.length);
                 break;
             case 'non-veg':
                 // Show only non-vegetarian items
                 filtered = products.filter(product => product.food_type === 'non-veg');
+                console.log('Non-vegetarian filter applied, filtered count:', filtered.length);
+                break;
+            case 'special':
+                // Show only today's special items
+                filtered = products.filter(product => product.is_todays_special === true);
+                console.log('Today\'s Special filter applied, filtered count:', filtered.length);
                 break;
             case 'all':
             default:
                 // Show all products
                 filtered = products;
+                console.log('All products shown');
                 break;
         }
         
@@ -779,8 +711,10 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 setProducts(prev => prev.filter(product => product.id !== id));
                 setSelectedProducts(prev => prev.filter(productId => productId !== id));
                 
-                // Refresh data
-                fetchInventory();
+                // Reapply current filter after deleting product
+                setTimeout(() => {
+                    applyFilters(activeFilter, selectedCategory);
+                }, 100);
             } catch (err) {
                 console.error('Delete error:', err);
                 alert('Failed to delete product');
@@ -852,8 +786,10 @@ const InventoryTable = ({ onStatsUpdate }) => {
             setIsModalOpen(false);
             setEditingProduct(null);
             
-            // Refresh data
-            fetchInventory();
+            // Reapply current filter after saving product
+            setTimeout(() => {
+                applyFilters(activeFilter, selectedCategory);
+            }, 100);
         } catch (err) {
             console.error('Save error:', err);
             const errorMessage = err.message || 'Failed to save product';
@@ -873,8 +809,10 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 setProducts(prev => prev.filter(product => !selectedProducts.includes(product.id)));
                 setSelectedProducts([]);
                 
-                // Refresh data
-                fetchInventory();
+                // Reapply current filter after bulk delete
+                setTimeout(() => {
+                    applyFilters(activeFilter, selectedCategory);
+                }, 100);
             } catch (err) {
                 console.error('Bulk delete error:', err);
                 alert('Failed to delete products');
@@ -882,8 +820,32 @@ const InventoryTable = ({ onStatsUpdate }) => {
         }
     };
 
+    const handleToggleSpecial = async (product) => {
+        try {
+            const newIsSpecial = !product.is_todays_special;
+            const { data: updatedProduct, error } = await supabase
+                .from('inventory')
+                .update({ is_todays_special: newIsSpecial })
+                .eq('id', product.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            setProducts(prev => prev.map(p => p.id === product.id ? updatedProduct : p));
+            console.log(`Product ${product.item_name} is now ${newIsSpecial ? 'Today\'s Special' : 'not Today\'s Special'}`);
+            
+            // Reapply current filter after updating product
+            setTimeout(() => {
+                applyFilters(activeFilter, selectedCategory);
+            }, 100);
+        } catch (err) {
+            console.error('Error toggling special:', err);
+            alert('Failed to toggle Today\'s Special status');
+        }
+    };
+
     return (
-        <div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             {/* Filter Options */}
             <FilterOptions 
                 onFilter={handleFilter} 
@@ -921,7 +883,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={handleAddProduct}
-                        className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                        className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                     >
                         <Plus size={18} /> Add Product
                     </button>
@@ -929,11 +891,11 @@ const InventoryTable = ({ onStatsUpdate }) => {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="text-left text-gray-500 border-b border-gray-200">
-                            <th className="p-3 font-medium w-10">
+                        <tr className="text-left text-gray-500 border-b border-gray-200 bg-gray-50">
+                            <th className="p-4 font-medium w-10">
                                 <input 
                                     type="checkbox" 
                                     checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
@@ -944,27 +906,29 @@ const InventoryTable = ({ onStatsUpdate }) => {
                                             setSelectedProducts([]);
                                         }
                                     }}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
                             </th>
-                            <th className="p-3 font-medium">Product</th>
-                            <th className="p-3 font-medium">Category</th>
-                            <th className="p-3 font-medium">Price</th>
-                            <th className="p-3 font-medium">Stock</th>
-                            <th className="p-3 font-medium">Status</th>
-                            <th className="p-3 font-medium">Actions</th>
+                            <th className="p-4 font-medium">Product</th>
+                            <th className="p-4 font-medium">Category</th>
+                            <th className="p-4 font-medium">Price</th>
+                            <th className="p-4 font-medium">Stock</th>
+                            <th className="p-4 font-medium">Status</th>
+                            <th className="p-4 font-medium">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredProducts.map(product => (
-                            <tr key={product.id} className={`border-b border-gray-200 hover:bg-gray-50 ${selectedProducts.includes(product.id) ? 'bg-blue-50' : ''}`}>
-                                <td className="p-3">
+                            <tr key={product.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 ${selectedProducts.includes(product.id) ? 'bg-blue-50' : 'bg-white'}`}>
+                                <td className="p-4">
                                     <input 
                                         type="checkbox" 
                                         checked={selectedProducts.includes(product.id)}
                                         onChange={() => toggleProduct(product.id)}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                     />
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <div className="flex items-center gap-3">
                                         <ProductImage 
                                             image={product.image_url} 
@@ -972,49 +936,66 @@ const InventoryTable = ({ onStatsUpdate }) => {
                                             onEdit={() => handleEditProduct(product)}
                                         />
                                         <div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 mb-1">
                                                 <p className="font-bold text-gray-800">{product.item_name}</p>
+                                                {product.is_todays_special && (
+                                                    <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                                        <Star size={12} className="fill-current" />
+                                                        Special
+                                                    </span>
+                                                )}
                                                 {product.food_type && (
-                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${
                                                         product.food_type === 'veg' 
                                                             ? 'bg-green-100 text-green-700 border border-green-200' 
                                                             : 'bg-red-100 text-red-700 border border-red-200'
                                                     }`}>
-                                                        {product.food_type === 'veg' ? '🥬 Veg' : '🍗 Non-Veg'}
+                                                        {product.food_type === 'veg' ? '🥬' : '🍗'}
+                                                        {product.food_type === 'veg' ? 'Veg' : 'Non-Veg'}
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-gray-500">{product.description || 'No description'}</p>
+                                            <p className="text-xs text-gray-500 mb-1">{product.description || 'No description'}</p>
                                             <p className="text-xs text-gray-400">{product.min_to_cook || 0} mins</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <CategoryBadge category={product.category} />
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <p className="font-bold text-gray-800">₹{product.price}</p>
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <div>
                                         <p className="font-medium text-gray-600">{product.stock_available || 0}</p>
                                         <p className="text-xs text-gray-500">of {product.stock_constant || 0}</p>
                                     </div>
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <StatusBadge stockAvailable={product.stock_available} stockConstant={product.stock_constant} />
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4">
                                     <div className="flex items-center gap-2">
                                         <button 
                                             onClick={() => handleEditProduct(product)}
-                                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
                                         >
                                             <Edit size={16} />
                                         </button>
                                         <button 
+                                            onClick={() => handleToggleSpecial(product)}
+                                            className={`p-2 rounded-lg transition-colors duration-200 ${
+                                                product.is_todays_special 
+                                                    ? 'text-orange-600 hover:bg-orange-100' 
+                                                    : 'text-gray-400 hover:bg-gray-100 hover:text-orange-600'
+                                            }`}
+                                        >
+                                            <Star size={16} className={product.is_todays_special ? 'fill-current' : ''} />
+                                        </button>
+                                        <button 
                                             onClick={() => handleDeleteProduct(product.id)}
-                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -1094,7 +1075,7 @@ export default function Inventory() {
                 <Header onRefresh={handleRefresh} />
                 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8">
                     <StatCard 
                         title="Total Products" 
                         value={stats.totalProducts} 
