@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Star, Plus, ArrowLeft, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Star, Plus } from 'lucide-react';
 import { handleAddToCart } from '../../lib/auth-utils';
 import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
@@ -93,7 +92,7 @@ const useTodaySpecialData = () => {
     return { foodItems, loading, error };
 };
 
-// --- Food Item Card Component (Updated with smaller size) ---
+// --- Enhanced Food Item Card Component with Original Styling Made Perfect ---
 const FoodItemCard = ({ item }) => {
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
@@ -127,10 +126,10 @@ const FoodItemCard = ({ item }) => {
     };
 
     return (
-        <div className={`h-full flex flex-col bg-white shadow-sm border rounded-xl overflow-hidden transition-all duration-300 ${
+        <div className={`h-full flex flex-col bg-white shadow-lg border rounded-xl overflow-hidden transition-all duration-300 ${
             !stockStatus.canOrder 
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
-                : 'hover:shadow-md hover:scale-[1.02] border-gray-100'
+                : 'hover:shadow-xl hover:scale-[1.02] border-gray-100 hover:border-orange-200'
         }`}>
             <div className="relative h-40 overflow-hidden">
                 <img 
@@ -160,7 +159,7 @@ const FoodItemCard = ({ item }) => {
                 {/* Overlay for out of stock items */}
                 {!stockStatus.canOrder && (
                     <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
-                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
                             <span className="text-xs font-semibold text-gray-700 tracking-wide">
                                 OUT OF STOCK
                             </span>
@@ -175,18 +174,18 @@ const FoodItemCard = ({ item }) => {
                     <h3 className={`text-lg font-bold truncate flex-1 pr-2 ${
                         !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
                     }`}>{item.name}</h3>
-                    {/* Enhanced Stock indicator with wow styling */}
+                    {/* Enhanced Stock indicator with perfect styling */}
                     <div className="flex items-center flex-shrink-0">
                         <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                             item.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
                             item.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
                         }`}></div>
-                        <span className={`text-[10px] font-medium tracking-wide ${
+                        <span className={`text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded-full ${
                             item.stockAvailable > 10 
-                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full' : 
+                                ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 
                             item.stockAvailable > 0 
-                                ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full' : 
-                                'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full'
+                                ? 'text-amber-700 bg-amber-50 border border-amber-200' : 
+                                'text-red-700 bg-red-50 border border-red-200'
                         }`}>
                             {item.stockAvailable > 10 ? 'In Stock' : 
                              item.stockAvailable > 0 ? `${item.stockAvailable} left` : 'Out of Stock'}
@@ -220,7 +219,7 @@ const FoodItemCard = ({ item }) => {
                             disabled={!stockStatus.canOrder || addingToCart}
                             className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
-                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95' 
+                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-lg hover:shadow-orange-500/30 hover:scale-105 active:scale-95' 
                                     : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
                             }`}
                         >
@@ -231,12 +230,12 @@ const FoodItemCard = ({ item }) => {
                         </button>
                     </div>
                     
-                    {/* Cart message displayed below the button */}
+                    {/* Enhanced Cart message displayed below the button */}
                     {cartMessage && (
                         <div className={`text-xs px-3 py-2 rounded-lg mt-3 text-center font-medium ${
                             cartMessage.includes('✅') 
-                                ? 'bg-green-50 text-green-700 border border-green-200' 
-                                : 'bg-red-50 text-red-700 border border-red-200'
+                                ? 'bg-green-50 text-green-700 border border-green-200 shadow-sm' 
+                                : 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
                         }`}>
                             {cartMessage}
                         </div>
@@ -247,180 +246,100 @@ const FoodItemCard = ({ item }) => {
     );
 };
 
-// --- Draggable Carousel Component ---
-const FoodCarousel = ({ children }) => {
-    const scrollContainerRef = useRef(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const [startX, setStartX] = useState(0);
-    const [scrollLeft, setScrollLeft] = useState(0);
-
-    const scroll = (direction) => {
-        if (scrollContainerRef.current) {
-            const scrollAmount = scrollContainerRef.current.offsetWidth * 0.9;
-            scrollContainerRef.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth',
-            });
-        }
-    };
-
-    const onMouseDown = (e) => {
-        if (!scrollContainerRef.current) return;
-        setIsDragging(true);
-        setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
-        setScrollLeft(scrollContainerRef.current.scrollLeft);
-        scrollContainerRef.current.style.cursor = 'grabbing';
-        scrollContainerRef.current.style.userSelect = 'none';
-    };
-
-    const onMouseLeaveOrUp = () => {
-        if (!scrollContainerRef.current) return;
-        setIsDragging(false);
-        scrollContainerRef.current.style.cursor = 'grab';
-        scrollContainerRef.current.style.removeProperty('user-select');
-    };
-
-    const onMouseMove = (e) => {
-        if (!isDragging || !scrollContainerRef.current) return;
-        e.preventDefault();
-        const x = e.pageX - scrollContainerRef.current.offsetLeft;
-        const walk = (x - startX) * 2.5; // Multiplier for faster scroll
-        scrollContainerRef.current.scrollLeft = scrollLeft - walk;
-    };
-
-    return (
-        <div className="w-full">
-            <div
-                ref={scrollContainerRef}
-                className="food-carousel flex space-x-6 pb-6 overflow-x-auto scrollbar-hide cursor-grab"
-                onMouseDown={onMouseDown}
-                onMouseLeave={onMouseLeaveOrUp}
-                onMouseUp={onMouseLeaveOrUp}
-                onMouseMove={onMouseMove}
-            >
-                {children}
-            </div>
-        </div>
-    );
-};
-
-// --- Main Component to render the carousel ---
+// --- Main Today's Special Component with Grid Layout ---
 const TodaysSpecial = () => {
-  const { foodItems, loading, error } = useTodaySpecialData();
-  const [refreshing, setRefreshing] = useState(false);
+    const { foodItems, loading, error } = useTodaySpecialData();
+    const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    // Force a refresh by re-fetching data
-    window.location.reload();
-  };
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        // Force a refresh by re-fetching data
+        window.location.reload();
+    };
 
-  if (loading) {
+    // Loading state
+    if (loading) {
+        return (
+            <div className="font-sans">
+                <div className="container mx-auto">
+                    <div className="flex justify-center items-center h-32">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                            <p className="mt-2 text-gray-600 text-sm">Loading today's special...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="font-sans">
+                <div className="container mx-auto">
+                    <div className="flex justify-center items-center h-32">
+                        <div className="text-center">
+                            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+                            <p className="text-red-600 font-semibold mb-2">Error loading today's special</p>
+                            <p className="text-gray-600 text-sm mb-4">{error}</p>
+                            <button 
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                            >
+                                {refreshing ? 'Refreshing...' : 'Try Again'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (foodItems.length === 0) {
+        return (
+            <div className="font-sans">
+                <div className="container mx-auto">
+                    <div className="flex justify-center items-center h-32">
+                        <div className="text-center">
+                            <p className="text-gray-500 text-sm">No special items marked for today. Check back later!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-      <div className="font-sans">
-        <div className="container mx-auto">
-          <div className="flex justify-center items-center h-32">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-              <p className="mt-2 text-gray-600 text-sm">Loading today's special...</p>
+        <div className="font-sans">
+            <div className="container mx-auto">
+                {/* Enhanced Section Header */}
+                <div className="text-center mb-10">
+                    <h2 className="text-4xl font-black text-gray-900 mb-3 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                        Hot Picks of the Day
+                    </h2>
+                    <p className="text-xl text-gray-600 font-medium">Today's most popular and trending items</p>
+                    <div className="w-24 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto mt-4 rounded-full"></div>
+                </div>
+                
+                {/* Enhanced Grid Layout - 2 items per row on small/medium screens */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+                    {foodItems.map((item) => (
+                        <FoodItemCard key={item.id} item={item} />
+                    ))}
+                </div>
+                
+                {/* Enhanced Item Count */}
+                <div className="text-center mt-12">
+                    <p className="text-gray-500 font-medium">
+                        Showing {foodItems.length} special item{foodItems.length !== 1 ? 's' : ''} today
+                    </p>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
     );
-  }
-
-  if (error) {
-    return (
-      <div className="font-sans">
-        <div className="container mx-auto">
-          <div className="flex justify-center items-center h-32">
-            <div className="text-center">
-              <div className="text-red-500 text-4xl mb-4">⚠️</div>
-              <p className="text-red-600 font-semibold mb-2">Error loading today's special</p>
-              <p className="text-gray-600 text-sm mb-4">{error}</p>
-              <button 
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50"
-              >
-                {refreshing ? 'Refreshing...' : 'Try Again'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (foodItems.length === 0) {
-    return (
-      <div className="font-sans">
-        <div className="container mx-auto">
-          <div className="flex justify-center items-center h-32">
-            <div className="text-center">
-              <p className="text-gray-500 text-sm">No special items marked for today. Check back later!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="font-sans">
-      <div className="container mx-auto">
-        {/* Section Header with Navigation */}
-        <div className="flex justify-between items-center mb-8">
-            {/* Left side - Text */}
-            <div className="text-left">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Hot Picks of the Day</h2>
-                <p className="text-gray-600">Today's most popular and trending items</p>
-            </div>
-            
-            {/* Right side - Navigation Controls */}
-            <div className="flex space-x-2">
-                <button
-                    onClick={() => {
-                        const scrollContainer = document.querySelector('.food-carousel');
-                        if (scrollContainer) {
-                            scrollContainer.scrollBy({
-                                left: -scrollContainer.offsetWidth * 0.9,
-                                behavior: 'smooth',
-                            });
-                        }
-                    }}
-                    className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
-                    aria-label="Scroll left"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <button
-                    onClick={() => {
-                        const scrollContainer = document.querySelector('.food-carousel');
-                        if (scrollContainer) {
-                            scrollContainer.scrollBy({
-                                left: scrollContainer.offsetWidth * 0.9,
-                                behavior: 'smooth',
-                            });
-                        }
-                    }}
-                    className="bg-white hover:bg-gray-50 border border-gray-200 rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-sm hover:shadow-md"
-                    aria-label="Scroll right"
-                >
-                    <ArrowRight className="w-5 h-5 text-gray-600" />
-                </button>
-            </div>
-        </div>
-        
-        <FoodCarousel>
-            {foodItems.map((item) => (
-                <FoodItemCard key={item.id} item={item} />
-            ))}
-        </FoodCarousel>
-      </div>
-    </div>
-  );
 };
 
 export default TodaysSpecial; 
