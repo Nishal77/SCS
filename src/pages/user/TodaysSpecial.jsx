@@ -129,7 +129,7 @@ const FoodItemCard = ({ item }) => {
         <div className={`h-full flex flex-col bg-white shadow-lg border rounded-xl overflow-hidden transition-all duration-300 ${
             !stockStatus.canOrder 
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
-                : 'hover:shadow-xl hover:scale-[1.02] border-gray-100 hover:border-orange-200'
+                : 'border-gray-100'
         }`}>
             <div className="relative h-40 overflow-hidden">
                 <img 
@@ -219,7 +219,7 @@ const FoodItemCard = ({ item }) => {
                             disabled={!stockStatus.canOrder || addingToCart}
                             className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
-                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-lg hover:shadow-orange-500/30 hover:scale-105 active:scale-95' 
+                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm' 
                                     : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
                             }`}
                         >
