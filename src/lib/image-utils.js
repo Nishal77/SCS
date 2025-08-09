@@ -77,11 +77,25 @@ export const formatImageUrl = (imageUrl) => {
 
 // Format product data for user display
 export const formatProductForUser = (product) => {
+    // Ensure price is properly formatted as a number
+    let formattedPrice = 0;
+    if (product.price !== null && product.price !== undefined) {
+        formattedPrice = typeof product.price === 'string' ? parseFloat(product.price) : Number(product.price);
+        // If parsing fails, set to 0
+        if (isNaN(formattedPrice)) {
+            formattedPrice = 0;
+        }
+        // Ensure price is always positive
+        if (formattedPrice < 0) {
+            formattedPrice = 0;
+        }
+    }
+    
     return {
         id: product.id,
         name: product.item_name,
         description: product.description,
-        price: parseFloat(product.price),
+        price: formattedPrice,
         category: product.category,
         image: formatImageUrl(product.image_url),
         deliveryTime: `${product.min_to_cook} mins`,
@@ -96,5 +110,54 @@ export const formatProductForUser = (product) => {
 
 // Check if product is available
 export const isProductAvailable = (product) => {
-    return product.stock_available > 0;
+    const stock = product.stock_available || product.stockAvailable || 0;
+    return stock > 0;
+};
+
+// Check stock level and return status
+export const getStockStatus = (stockAvailable) => {
+    if (!stockAvailable || stockAvailable <= 0) {
+        return {
+            status: 'out_of_stock',
+            label: 'Out of Stock',
+            color: 'red',
+            canOrder: false
+        };
+    } else if (stockAvailable <= 5) {
+        return {
+            status: 'low_stock',
+            label: `Only ${stockAvailable} left`,
+            color: 'yellow',
+            canOrder: true
+        };
+    } else {
+        return {
+            status: 'in_stock',
+            label: 'In Stock',
+            color: 'green',
+            canOrder: true
+        };
+    }
+};
+
+// Format price for consistent display across the application
+export const formatPrice = (price) => {
+    if (price === null || price === undefined || isNaN(price)) {
+        return '0.00';
+    }
+    
+    const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+    
+    if (isNaN(numPrice) || numPrice < 0) {
+        return '0.00';
+    }
+    
+    // Format to 2 decimal places
+    return numPrice.toFixed(2);
+};
+
+// Format price with currency symbol for display
+export const formatPriceWithCurrency = (price) => {
+    const formattedPrice = formatPrice(price);
+    return `₹${formattedPrice}`;
 }; 

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from '../../components/spectrumui/footer.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, ChevronDown, Clock, CreditCard, Home, Landmark, Minus, Plus, ShoppingCart, User, Wallet, MessageSquare, Tag } from 'lucide-react';
+import { CheckCircle, ChevronDown, Clock, CreditCard, Home, Landmark, Minus, Plus, ShoppingCart, User, Wallet, MessageSquare, Tag, AlertCircle } from 'lucide-react';
+import { getCartItems, updateCartItemQuantity, removeFromCart, clearCart } from '../../lib/cart-utils';
+import { checkAuthStatus } from '../../lib/auth-utils';
 
 // --- Helper Function to Generate Time Slots ---
 const generateTimeSlots = () => {
@@ -57,46 +59,82 @@ const generateTimeSlots = () => {
 };
 
 
-// --- Mock Data for Cart Items (Indian Dishes) ---
-const initialCartItems = [
-  {
-    id: 1,
-    name: 'Samosa Chaat',
-    image: 'https://placehold.co/100x100/f97316/white?text=Samosa',
-    price: 80,
-    quantity: 2,
-  },
-  {
-    id: 2,
-    name: 'Masala Dosa',
-    image: 'https://placehold.co/100x100/fbbf24/white?text=Dosa',
-    price: 120,
-    quantity: 1,
-  },
-  {
-    id: 3,
-    name: 'Paneer Butter Masala Combo',
-    image: 'https://placehold.co/100x100/ef4444/white?text=Paneer',
-    price: 250,
-    quantity: 1,
-  },
-];
+// --- Cart State Management ---
+const useCartData = () => {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchCartItems = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Check if user is authenticated
+      if (!checkAuthStatus()) {
+        setError('Please login to view your cart');
+        setCartItems([]);
+        return;
+      }
+
+      // Get user ID from session
+      const userSession = localStorage.getItem('user_session');
+      if (!userSession) {
+        setError('Session expired. Please login again.');
+        setCartItems([]);
+        return;
+      }
+
+      const sessionData = JSON.parse(userSession);
+      const userId = sessionData.id;
+
+      const items = await getCartItems(userId);
+      setCartItems(items);
+    } catch (err) {
+      setError('Failed to load cart items');
+      console.error('Error fetching cart items:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartItems();
+  }, []);
+
+  return { cartItems, loading, error, fetchCartItems };
+};
 
 // --- Reusable Components ---
 
-const OrderItem = ({ item, onQuantityChange }) => (
+const OrderItem = ({ item, onQuantityChange, updating }) => (
   <div className="flex items-center gap-3 py-3">
     <img src={item.image} alt={item.name} className="w-14 h-14 rounded-md object-cover" />
     <div className="flex-grow">
       <p className="font-semibold text-sm text-gray-800">{item.name}</p>
       <p className="text-xs text-gray-500">₹{item.price.toFixed(2)}</p>
+      {item.stockAvailable !== undefined && (
+        <p className="text-xs text-gray-400">
+          Stock: {item.stockAvailable} available
+        </p>
+      )}
     </div>
     <div className="flex items-center gap-2 border border-gray-200 rounded-full py-0.5 px-1">
-      <button onClick={() => onQuantityChange(item.id, -1)} className="p-1 rounded-full hover:bg-gray-100">
+      <button 
+        onClick={() => onQuantityChange(item.id, -1)} 
+        disabled={updating}
+        className={`p-1 rounded-full hover:bg-gray-100 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
         <Minus size={12} className="text-gray-600" />
       </button>
-      <span className="font-bold text-sm w-5 text-center">{item.quantity}</span>
-      <button onClick={() => onQuantityChange(item.id, 1)} className="p-1 rounded-full hover:bg-gray-100">
+      <span className="font-bold text-sm w-5 text-center">
+        {updating ? '...' : item.quantity}
+      </span>
+      <button 
+        onClick={() => onQuantityChange(item.id, 1)} 
+        disabled={updating}
+        className={`p-1 rounded-full hover:bg-gray-100 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
         <Plus size={12} className="text-gray-600" />
       </button>
     </div>
@@ -129,11 +167,14 @@ const SectionCard = ({ title, children }) => (
 
 // --- Main Cart Component ---
 const SmartCanteenCart = () => {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const { cartItems, loading: cartLoading, error: cartError, fetchCartItems } = useCartData();
   const [diningOption, setDiningOption] = useState('dine-in');
   const [pickupTime, setPickupTime] = useState('');
   const [timeSlots, setTimeSlots] = useState([]);
   const [instructions, setInstructions] = useState('');
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [updatingQuantity, setUpdatingQuantity] = useState(null);
 
   useEffect(() => {
     const slots = generateTimeSlots();
@@ -143,16 +184,64 @@ const SmartCanteenCart = () => {
     }
   }, []);
 
-  const handleQuantityChange = (itemId, change) => {
-    setCartItems(prevItems =>
-      prevItems
-        .map(item =>
-          item.id === itemId
-            ? { ...item, quantity: Math.max(0, item.quantity + change) }
-            : item
-        )
-        .filter(item => item.quantity > 0)
-    );
+  // Fetch user data from localStorage session
+  useEffect(() => {
+    const fetchUserData = () => {
+      try {
+        const userSession = localStorage.getItem('user_session');
+        if (userSession) {
+          const sessionData = JSON.parse(userSession);
+          if (sessionData && sessionData.id) {
+            setUserData(sessionData);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing user session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleQuantityChange = async (itemId, change) => {
+    const item = cartItems.find(item => item.id === itemId);
+    if (!item) return;
+
+    const newQuantity = Math.max(0, item.quantity + change);
+    
+    if (newQuantity === 0) {
+      // Remove item from cart
+      setUpdatingQuantity(itemId);
+      try {
+        const result = await removeFromCart(itemId);
+        if (result.success) {
+          await fetchCartItems(); // Refresh cart data
+        } else {
+          console.error('Failed to remove item:', result.error);
+        }
+      } catch (error) {
+        console.error('Error removing item:', error);
+      } finally {
+        setUpdatingQuantity(null);
+      }
+    } else {
+      // Update quantity
+      setUpdatingQuantity(itemId);
+      try {
+        const result = await updateCartItemQuantity(itemId, newQuantity);
+        if (result.success) {
+          await fetchCartItems(); // Refresh cart data
+        } else {
+          console.error('Failed to update quantity:', result.error);
+        }
+      } catch (error) {
+        console.error('Error updating quantity:', error);
+      } finally {
+        setUpdatingQuantity(null);
+      }
+    }
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -169,19 +258,90 @@ const SmartCanteenCart = () => {
             <h1 className="text-2xl font-bold text-gray-800">Your Canteen Cart</h1>
         </div>
         
+        {cartError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <p className="text-red-700">{cartError}</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
+            
+            {cartLoading ? (
+              <SectionCard title="Cart Items">
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="flex items-center gap-3 py-3">
+                        <div className="w-14 h-14 bg-gray-200 rounded-md"></div>
+                        <div className="flex-grow">
+                          <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-20"></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                          <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            ) : cartItems.length === 0 ? (
+              <SectionCard title="Cart Items">
+                <div className="text-center py-8">
+                  <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">Your cart is empty</p>
+                  <p className="text-gray-400 text-sm">Add some delicious items to get started!</p>
+                </div>
+              </SectionCard>
+            ) : (
+              <SectionCard title="Cart Items">
+                {cartItems.map(item => (
+                  <OrderItem 
+                    key={item.id} 
+                    item={item} 
+                    onQuantityChange={handleQuantityChange}
+                    updating={updatingQuantity === item.id}
+                  />
+                ))}
+              </SectionCard>
+            )}
             
             <SectionCard title="Your Details">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                    <Avatar className="w-6 h-6">
-                <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                <AvatarFallback>N</AvatarFallback>
-            </Avatar>
+                        <Avatar className="w-6 h-6">
+                            <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+                            <AvatarFallback>
+                                {userData ? (userData.name ? userData.name.charAt(0).toUpperCase() : userData.email_name ? userData.email_name.charAt(0).toUpperCase() : 'U') : 'U'}
+                            </AvatarFallback>
+                        </Avatar>
                         <div>
-                            <p className="font-semibold text-sm text-gray-800">Nishal N Poojary</p>
-                            <p className="text-xs text-gray-500">2024mca039@mite.ac.in</p>
+                            {loading ? (
+                                <div className="animate-pulse">
+                                    <div className="h-4 bg-gray-200 rounded w-32 mb-1"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-40"></div>
+                                </div>
+                            ) : userData ? (
+                                <>
+                                    <p className="font-semibold text-sm text-gray-800">
+                                        {userData.name || userData.email_name || 'User'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {userData.email || `${userData.email_name}@mite.ac.in`}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="font-semibold text-sm text-gray-800">Guest User</p>
+                                    <p className="text-xs text-gray-500">Please login to continue</p>
+                                </>
+                            )}
                         </div>
                     </div>
                     <button className="font-semibold text-xs text-orange-600 hover:underline">Change</button>
@@ -259,9 +419,37 @@ const SmartCanteenCart = () => {
           <div className="bg-white p-5 rounded-lg shadow-sm h-fit sticky top-6">
             <h2 className="text-md font-bold text-gray-800 border-b pb-3 mb-3">Order Summary</h2>
             <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto pr-2">
-                {cartItems.map(item => (
-                    <OrderItem key={item.id} item={item} onQuantityChange={handleQuantityChange} />
-                ))}
+                {cartLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="flex items-center gap-3 py-2">
+                          <div className="w-10 h-10 bg-gray-200 rounded-md"></div>
+                          <div className="flex-grow">
+                            <div className="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                            <div className="h-2 bg-gray-200 rounded w-16"></div>
+                          </div>
+                          <div className="w-8 h-8 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : cartItems.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400 text-sm">No items in cart</p>
+                  </div>
+                ) : (
+                  cartItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 py-2">
+                      <img src={item.image} alt={item.name} className="w-10 h-10 rounded-md object-cover" />
+                      <div className="flex-grow">
+                        <p className="font-semibold text-xs text-gray-800 truncate">{item.name}</p>
+                        <p className="text-xs text-gray-500">₹{item.price.toFixed(2)} × {item.quantity}</p>
+                      </div>
+                      <span className="font-bold text-sm text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))
+                )}
             </div>
             
             <div className="mt-4 pt-4 border-t">

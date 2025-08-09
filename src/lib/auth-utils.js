@@ -76,10 +76,32 @@ export const redirectToLogin = (navigate) => {
 };
 
 // Handle add to cart with authentication check
-export const handleAddToCart = (navigate) => {
+export const handleAddToCart = async (navigate, productId, quantity = 1) => {
     if (!checkAuthStatus()) {
         redirectToLogin(navigate);
-        return false;
+        return { success: false, error: 'Authentication required' };
     }
-    return true;
+    
+    try {
+        // Get current user ID from session
+        const userSession = localStorage.getItem('user_session');
+        if (!userSession) {
+            redirectToLogin(navigate);
+            return { success: false, error: 'Session expired' };
+        }
+        
+        const sessionData = JSON.parse(userSession);
+        const userId = sessionData.id;
+        
+        // Import cart utilities dynamically to avoid circular dependencies
+        const { addToCart } = await import('./cart-utils');
+        
+        // Add item to cart with stock validation
+        const result = await addToCart(userId, productId, quantity);
+        
+        return result;
+    } catch (error) {
+        console.error('Error in handleAddToCart:', error);
+        return { success: false, error: 'Failed to add item to cart' };
+    }
 }; 

@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Star, Plus, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { handleAddToCart } from '../../lib/auth-utils';
-import { formatProductForUser, isProductAvailable } from '../../lib/image-utils';
+import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
 
-// --- Real Data Hook ---
+// --- Real Data Hook with Real-time Updates ---
 const useTodaySpecialData = () => {
     const [foodItems, setFoodItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -46,7 +46,48 @@ const useTodaySpecialData = () => {
             }
         };
 
+        // Initial fetch
         fetchTodaySpecial();
+
+        // Set up real-time subscription for price updates
+        const subscription = supabase
+            .channel('inventory_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'inventory',
+                    filter: 'is_todays_special=eq.true'
+                },
+                (payload) => {
+                    console.log('Real-time inventory update received:', payload);
+                    
+                    // Handle different types of changes
+                    if (payload.eventType === 'UPDATE') {
+                        // Update existing product
+                        setFoodItems(prev => prev.map(item => 
+                            item.id === payload.new.id 
+                                ? formatProductForUser(payload.new)
+                                : item
+                        ));
+                    } else if (payload.eventType === 'INSERT') {
+                        // Add new product
+                        if (payload.new.is_todays_special) {
+                            setFoodItems(prev => [formatProductForUser(payload.new), ...prev]);
+                        }
+                    } else if (payload.eventType === 'DELETE') {
+                        // Remove deleted product
+                        setFoodItems(prev => prev.filter(item => item.id !== payload.old.id));
+                    }
+                }
+            )
+            .subscribe();
+
+        // Cleanup subscription
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     return { foodItems, loading, error };
@@ -55,25 +96,53 @@ const useTodaySpecialData = () => {
 // --- Food Item Card Component (Updated with smaller size) ---
 const FoodItemCard = ({ item }) => {
     const navigate = useNavigate();
+    const [addingToCart, setAddingToCart] = useState(false);
+    const [cartMessage, setCartMessage] = useState('');
     
-    const handleAddClick = () => {
-        if (handleAddToCart(navigate)) {
-            // User is authenticated, proceed with adding to cart
-            console.log('Adding to cart:', item.name);
-            // Add your cart logic here
+    // Get stock status for this product
+    const stockStatus = getStockStatus(item.stockAvailable);
+    
+    const handleAddClick = async () => {
+        if (!stockStatus.canOrder) {
+            setCartMessage('Product is out of stock');
+            setTimeout(() => setCartMessage(''), 3000);
+            return;
+        }
+        
+        setAddingToCart(true);
+        setCartMessage('');
+        
+        try {
+            const result = await handleAddToCart(navigate, item.id, 1);
+            
+            if (result.success) {
+                setCartMessage('✅ Added to cart successfully!');
+                // Don't update local stock here - let the real-time subscription handle it
+                // The stock will be updated from the database via real-time updates
+            } else {
+                setCartMessage(`❌ ${result.error}`);
+                // If stock error, refresh the product data to get updated stock
+                if (result.error.includes('stock') || result.error.includes('Stock')) {
+                    // Trigger a refresh of the product data
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            setCartMessage('❌ Failed to add to cart');
+            console.error('Error adding to cart:', error);
+        } finally {
+            setAddingToCart(false);
+            setTimeout(() => setCartMessage(''), 3000);
         }
     };
 
-    // Check if product is available
-    const isAvailable = isProductAvailable(item);
-
     return (
-        <div className="flex-shrink-0 w-72 bg-slate-100 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out group ">
+        <div className="flex-shrink-0 w-72 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ease-in-out group border border-gray-100">
             <div className="relative">
                 <img 
                     src={item.image} 
                     alt={item.name} 
-                    className="w-full h-36 object-cover transition-transform duration-300 "
+                    className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => { 
                         console.log(`❌ Image failed to load for ${item.name}:`, item.image);
                         // Try to load a fallback image
@@ -86,11 +155,26 @@ const FoodItemCard = ({ item }) => {
                         }
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                {/* Offer removed */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
             </div>
             <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-900 truncate">{item.name}</h3>
+                <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-bold text-gray-900 truncate flex-1 pr-2">{item.name}</h3>
+                    {/* Stock indicator moved to top right */}
+                    <div className="flex items-center flex-shrink-0">
+                        <div className={`w-2 h-2 rounded-full mr-1 ${
+                            item.stockAvailable > 10 ? 'bg-green-500' : 
+                            item.stockAvailable > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></div>
+                        <span className={`text-xs font-medium ${
+                            item.stockAvailable > 10 ? 'text-green-600' : 
+                            item.stockAvailable > 0 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                            {item.stockAvailable > 10 ? 'In Stock' : 
+                             item.stockAvailable > 0 ? `${item.stockAvailable} left` : 'Out of Stock'}
+                        </span>
+                    </div>
+                </div>
                 <div className="flex items-center mt-1.5 text-gray-700">
                     <Star className="w-5 h-5 text-green-600 fill-current" />
                     <span className="ml-1.5 font-semibold">{item.rating}</span>
@@ -98,20 +182,33 @@ const FoodItemCard = ({ item }) => {
                     <span className="font-medium text-sm">{item.deliveryTime}</span>
                 </div>
                 <p className="mt-1.5 text-gray-500 text-sm truncate">{item.cuisine}</p>
-                <div className="mt-4 flex items-center justify-between">
-                    <p className="text-xl font-extrabold text-gray-900">₹{item.price}</p>
-                    <button 
-                        onClick={handleAddClick}
-                        disabled={!isAvailable}
-                        className={`flex items-center gap-2 px-4 py-2 border-2 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                            isAvailable 
-                                ? 'border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white' 
-                                : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                        <Plus className="w-5 h-5"/>
-                        {isAvailable ? 'ADD' : 'OUT OF STOCK'}
-                    </button>
+                <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-xl font-extrabold text-gray-900">{formatPriceWithCurrency(item.price)}</p>
+                        <button 
+                            onClick={handleAddClick}
+                            disabled={!stockStatus.canOrder || addingToCart}
+                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                stockStatus.canOrder && !addingToCart
+                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md' 
+                                    : 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                            }`}
+                        >
+                            <Plus className="w-4 h-4"/>
+                            {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
+                        </button>
+                    </div>
+                    
+                    {/* Cart message displayed below the button */}
+                    {cartMessage && (
+                        <div className={`text-xs px-3 py-2 rounded-lg mt-3 text-center font-medium ${
+                            cartMessage.includes('✅') 
+                                ? 'bg-green-50 text-green-700 border border-green-200' 
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            {cartMessage}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -178,6 +275,13 @@ const FoodCarousel = ({ children }) => {
 // --- Main Component to render the carousel ---
 const TodaysSpecial = () => {
   const { foodItems, loading, error } = useTodaySpecialData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Force a refresh by re-fetching data
+    window.location.reload();
+  };
 
   if (loading) {
     return (
@@ -200,7 +304,16 @@ const TodaysSpecial = () => {
         <div className="container mx-auto">
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
-              <p className="text-red-600 text-sm">Error loading today's special: {error}</p>
+              <div className="text-red-500 text-4xl mb-4">⚠️</div>
+              <p className="text-red-600 font-semibold mb-2">Error loading today's special</p>
+              <p className="text-gray-600 text-sm mb-4">{error}</p>
+              <button 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+              >
+                {refreshing ? 'Refreshing...' : 'Try Again'}
+              </button>
             </div>
           </div>
         </div>

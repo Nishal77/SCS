@@ -2,11 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Star, ChevronDown, SlidersHorizontal, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { handleAddToCart } from '../../lib/auth-utils';
-import { formatProductForUser, isProductAvailable } from '../../lib/image-utils';
+import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
 import FoodSymbol from '../../components/FoodSymbol';
 
-// --- Real Data from Supabase ---
+// --- Real Data from Supabase with Real-time Updates ---
 const useInventoryData = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,7 +45,45 @@ const useInventoryData = () => {
             }
         };
 
+        // Initial fetch
         fetchProducts();
+
+        // Set up real-time subscription for price updates
+        const subscription = supabase
+            .channel('inventory_changes_restaurant')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'inventory'
+                },
+                (payload) => {
+                    console.log('Real-time inventory update received in RestaurantList:', payload);
+                    
+                    // Handle different types of changes
+                    if (payload.eventType === 'UPDATE') {
+                        // Update existing product
+                        setProducts(prev => prev.map(item => 
+                            item.id === payload.new.id 
+                                ? formatProductForUser(payload.new)
+                                : item
+                        ));
+                    } else if (payload.eventType === 'INSERT') {
+                        // Add new product
+                        setProducts(prev => [formatProductForUser(payload.new), ...prev]);
+                    } else if (payload.eventType === 'DELETE') {
+                        // Remove deleted product
+                        setProducts(prev => prev.filter(item => item.id !== payload.old.id));
+                    }
+                }
+            )
+            .subscribe();
+
+        // Cleanup subscription
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     return { products, loading, error };
@@ -55,12 +93,12 @@ const useInventoryData = () => {
 const FilterBar = ({ activeFilter, setActiveFilter }) => {
     const filters = [
         { id: 'all', label: 'All', icon: '🍽️' },
-        { id: 'breakfast', label: 'Breakfast', icon: '🌅' },
-        { id: 'lunch', label: 'Lunch', icon: '🍱' },
-        { id: 'dinner', label: 'Dinner', icon: '🌙' },
-        { id: 'snacks', label: 'Snacks', icon: '🍿' },
-        { id: 'beverages', label: 'Beverages', icon: '🥤' },
+        { id: 'special_items', label: 'Special Items', icon: '⭐' },
+        { id: 'combo_pack', label: 'Combo Pack', icon: '🍱' },
         { id: 'juice', label: 'Juice', icon: '🍹' },
+        { id: 'milk_shake', label: 'Milk Shake', icon: '🥛' },
+        { id: 'icecreams', label: 'Icecreams', icon: '🍦' },
+        { id: 'chat_items', label: 'Chat Items', icon: '🍲' },
     ];
 
     return (
@@ -86,41 +124,84 @@ const FilterBar = ({ activeFilter, setActiveFilter }) => {
 // --- Restaurant Card Component (with Price and Add button, offer removed) ---
 const RestaurantCard = ({ restaurant }) => {
     const navigate = useNavigate();
+    const [addingToCart, setAddingToCart] = useState(false);
+    const [cartMessage, setCartMessage] = useState('');
     
-    const handleAddClick = () => {
-        if (handleAddToCart(navigate)) {
-            // User is authenticated, proceed with adding to cart
-            console.log('Adding to cart:', restaurant.name);
-            // Add your cart logic here
+    // Get stock status for this product
+    const stockStatus = getStockStatus(restaurant.stockAvailable);
+    
+    const handleAddClick = async () => {
+        if (!stockStatus.canOrder) {
+            setCartMessage('Product is out of stock');
+            setTimeout(() => setCartMessage(''), 3000);
+            return;
+        }
+        
+        setAddingToCart(true);
+        setCartMessage('');
+        
+        try {
+            const result = await handleAddToCart(navigate, restaurant.id, 1);
+            
+            if (result.success) {
+                setCartMessage('✅ Added to cart successfully!');
+                // Don't update local stock here - let the real-time subscription handle it
+                // The stock will be updated from the database via real-time updates
+            } else {
+                setCartMessage(`❌ ${result.error}`);
+                // If stock error, refresh the product data to get updated stock
+                if (result.error.includes('stock') || result.error.includes('Stock')) {
+                    // Trigger a refresh of the product data
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            setCartMessage('❌ Failed to add to cart');
+            console.error('Error adding to cart:', error);
+        } finally {
+            setAddingToCart(false);
+            setTimeout(() => setCartMessage(''), 3000);
         }
     };
 
-    // Check if product is available
-    const isAvailable = isProductAvailable(restaurant);
-
     return (
-    <div className="bg-slate-100 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out hover:scale-95 active:scale-90 group">
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ease-in-out hover:scale-[0.98] active:scale-[0.96] group border border-gray-100">
         <div className="relative">
             <img 
                 src={restaurant.image} 
                 alt={restaurant.name} 
-                className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-105" // reduced from h-48 to h-36
-                    onError={(e) => { 
-                        console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
-                        // Try to load a fallback image
-                        if (!e.target.dataset.fallbackAttempted) {
-                            e.target.dataset.fallbackAttempted = 'true';
-                            e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
-                        } else {
-                            // If fallback also fails, hide the image
-                            e.target.style.display = 'none';
-                        }
-                    }}
+                className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
+                onError={(e) => { 
+                    console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
+                    // Try to load a fallback image
+                    if (!e.target.dataset.fallbackAttempted) {
+                        e.target.dataset.fallbackAttempted = 'true';
+                        e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
+                    } else {
+                        // If fallback also fails, hide the image
+                        e.target.style.display = 'none';
+                    }
+                }}
             />
-            {/* Offer removed */}
         </div>
-        <div className="p-3 flex flex-col flex-grow"> {/* reduced padding from p-4 to p-3 */}
-            <h3 className="text-base font-semibold text-gray-900 truncate">{restaurant.name}</h3> {/* text-lg -> text-base */}
+        <div className="p-4 flex flex-col flex-grow">
+            <div className="flex items-start justify-between">
+                <h3 className="text-base font-semibold text-gray-900 truncate flex-1 pr-2">{restaurant.name}</h3>
+                {/* Stock indicator moved to top right */}
+                <div className="flex items-center flex-shrink-0">
+                    <div className={`w-2 h-2 rounded-full mr-1 ${
+                        restaurant.stockAvailable > 10 ? 'bg-green-500' : 
+                        restaurant.stockAvailable > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className={`text-xs font-medium ${
+                        restaurant.stockAvailable > 10 ? 'text-green-600' : 
+                        restaurant.stockAvailable > 0 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                        {restaurant.stockAvailable > 10 ? 'In Stock' : 
+                         restaurant.stockAvailable > 0 ? `${restaurant.stockAvailable} left` : 'Out of Stock'}
+                    </span>
+                </div>
+            </div>
             <div className="flex items-center mt-1 text-gray-800">
                 <Star className="w-4 h-4 text-green-600 fill-current" /> {/* w-5 h-5 -> w-4 h-4 */}
                 <span className="ml-1 font-bold text-sm">{restaurant.rating}</span> {/* ml-1.5 -> ml-1, text-sm */}
@@ -128,21 +209,32 @@ const RestaurantCard = ({ restaurant }) => {
                 <span className="font-medium text-xs">{restaurant.deliveryTime}</span> {/* text-sm -> text-xs */}
             </div>
             <p className="mt-1 text-gray-500 text-xs truncate">{restaurant.cuisine}</p> {/* mt-1.5 -> mt-1, text-sm -> text-xs */}
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between"> {/* mt-4 pt-4 -> mt-3 pt-3 */}
-                <p className="text-xl  font-extrabold text-black">₹{restaurant.price}</p> {/* text-xl -> text-lg */}
-                    <button 
-                        onClick={handleAddClick}
-                        disabled={!isAvailable}
-                        className={`flex items-center gap-2 px-4 py-2 border-2 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                            isAvailable 
-                                ? 'border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white' 
-                                : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                    <Plus className="w-5 h-5"/>
-                        {isAvailable ? 'ADD' : 'OUT OF STOCK'}
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-xl font-extrabold text-black">₹{restaurant.price}</p>
+                <button 
+                    onClick={handleAddClick}
+                    disabled={!stockStatus.canOrder || addingToCart}
+                    className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                        stockStatus.canOrder && !addingToCart
+                            ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md' 
+                            : 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                    }`}
+                >
+                    <Plus className="w-4 h-4"/>
+                    {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
                 </button>
             </div>
+            
+            {/* Cart message displayed below the button */}
+            {cartMessage && (
+                <div className={`text-xs px-3 py-2 rounded-lg mt-3 text-center font-medium ${
+                    cartMessage.includes('✅') 
+                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                    {cartMessage}
+                </div>
+            )}
         </div>
     </div>
 );
@@ -153,6 +245,13 @@ export default function App() {
     const { products, loading, error } = useInventoryData();
     const [dietaryFilter, setDietaryFilter] = useState('all'); // 'all', 'veg', 'non-veg'
     const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'breakfast', 'lunch', etc.
+    const [refreshing, setRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        // Force a refresh by re-fetching data
+        window.location.reload();
+    };
 
     const filteredRestaurants = useMemo(() => {
         if (loading) return [];
@@ -174,6 +273,46 @@ export default function App() {
         
         return filtered;
     }, [dietaryFilter, categoryFilter, products, loading, error]);
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="font-sans">
+                <div className="container mx-auto">
+                    <div className="flex justify-center items-center h-32">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                            <p className="mt-2 text-gray-600 text-sm">Loading restaurant menu...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="font-sans">
+                <div className="container mx-auto">
+                    <div className="flex justify-center items-center h-32">
+                        <div className="text-center">
+                            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+                            <p className="text-red-600 font-semibold mb-2">Error loading restaurant menu</p>
+                            <p className="text-gray-600 text-sm mb-4">{error}</p>
+                            <button 
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                            >
+                                {refreshing ? 'Refreshing...' : 'Try Again'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // Veg/Non-Veg Toggle Component (with FoodSymbol icons)
     const VegToggle = ({ filter, setFilter }) => {
@@ -202,35 +341,6 @@ export default function App() {
             </div>
         );
     };
-
-    if (loading) {
-        return (
-            <div className="bg-gray-50 min-h-screen font-sans">
-                <div className="container mx-auto mt-12">
-                    <div className="flex justify-center items-center h-64">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Loading menu items...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-    return (
-        <div className="bg-gray-50 min-h-screen font-sans">
-            <div className="container mx-auto mt-12">
-                    <div className="flex justify-center items-center h-64">
-                        <div className="text-center">
-                            <p className="text-red-600">Error loading menu items: {error}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="font-sans">

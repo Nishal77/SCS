@@ -9,7 +9,7 @@ import {
     Plus, Download, Settings2, SlidersHorizontal, ArrowUpDown, Table, BarChart2,
     Trash2, Edit, X, TrendingUp, Clock, User, CreditCard, CheckCircle, 
     XCircle, AlertCircle, Package, Phone, MapPin, Calendar, DollarSign, Search,
-    Filter, Upload, Eye, EyeOff, Tag, Image as ImageIcon, Star
+    Filter, Upload, Eye, EyeOff, Tag, Image as ImageIcon, Star, ChevronDown
 } from 'lucide-react';
 import { formatImageUrl, formatProductForUser } from '@/lib/image-utils';
 import supabase from '@/lib/supabase';
@@ -131,8 +131,11 @@ const CategoryBadge = ({ category }) => {
         'Lunch': 'bg-green-100 text-green-700 border-green-200',
         'Dinner': 'bg-purple-100 text-purple-700 border-purple-200',
         'Snacks': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-        'Beverages': 'bg-pink-100 text-pink-700 border-pink-200',
-        'Desserts': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+        'Combo': 'bg-orange-100 text-orange-700 border-orange-200',
+        'Chats Items': 'bg-red-100 text-red-700 border-red-200',
+        'Juice': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+        'Milkshake': 'bg-pink-100 text-pink-700 border-pink-200',
+        'Icecream': 'bg-indigo-100 text-indigo-700 border-indigo-200',
     };
     return (
         <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${categoryStyles[category] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
@@ -181,7 +184,7 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
         { id: 'special', label: "Today's Special", icon: '⭐' }
     ];
 
-    const categories = ['All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages', 'Desserts'];
+    const categories = ['All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Combo', 'Chats Items', 'Juice', 'Milkshake', 'Icecream'];
 
     const handleFilterClick = (filterId) => {
         onFilter(filterId);
@@ -316,17 +319,31 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                 
                                 <div className="space-y-2">
                                     <label className="block text-sm font-semibold text-gray-700">Price (₹)</label>
-                                    <input
-                                        type="number"
-                                        name="price"
-                                        value={formData.price}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
-                                        placeholder="0.00"
-                                        required
-                                        min="0"
-                                        step="0.01"
-                                    />
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                                        <input
+                                            type="number"
+                                            name="price"
+                                            value={formData.price}
+                                            onChange={handleChange}
+                                            className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                            placeholder="0.00"
+                                            required
+                                            min="0"
+                                            step="0.01"
+                                            onBlur={(e) => {
+                                                // Format price to 2 decimal places on blur
+                                                const value = parseFloat(e.target.value);
+                                                if (!isNaN(value) && value >= 0) {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        price: value.toFixed(2)
+                                                    }));
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Enter price in Indian Rupees (₹)</p>
                                 </div>
                                 
                                 <div className="space-y-2">
@@ -343,8 +360,11 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                         <option value="Lunch">Lunch</option>
                                         <option value="Dinner">Dinner</option>
                                         <option value="Snacks">Snacks</option>
-                                        <option value="Beverages">Beverages</option>
-                                        <option value="Desserts">Desserts</option>
+                                        <option value="Combo">Combo</option>
+                                        <option value="Chats Items">Chats Items</option>
+                                        <option value="Juice">Juice</option>
+                                        <option value="Milkshake">Milkshake</option>
+                                        <option value="Icecream">Icecream</option>
                                     </select>
                                 </div>
                                 
@@ -545,6 +565,13 @@ const InventoryTable = ({ onStatsUpdate }) => {
     const [activeFilter, setActiveFilter] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
     const [lastRefresh, setLastRefresh] = useState(new Date());
+    const [notification, setNotification] = useState(null);
+
+    // Show notification function
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000);
+    };
 
     // Fetch inventory from Supabase - defined with useCallback to avoid recreation
     const fetchInventory = useCallback(async () => {
@@ -616,6 +643,56 @@ const InventoryTable = ({ onStatsUpdate }) => {
 
         return () => clearInterval(interval);
     }, [fetchInventory]);
+
+    // Set up real-time subscription for immediate updates
+    useEffect(() => {
+        const subscription = supabase
+            .channel('inventory_realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'inventory'
+                },
+                (payload) => {
+                    console.log('Real-time inventory update received in staff view:', payload);
+                    
+                    // Handle different types of changes
+                    if (payload.eventType === 'UPDATE') {
+                        // Update existing product
+                        setProducts(prev => prev.map(item => 
+                            item.id === payload.new.id 
+                                ? { ...item, ...payload.new }
+                                : item
+                        ));
+                        
+                        // Update filtered products as well
+                        setFilteredProducts(prev => prev.map(item => 
+                            item.id === payload.new.id 
+                                ? { ...item, ...payload.new }
+                                : item
+                        ));
+                    } else if (payload.eventType === 'INSERT') {
+                        // Add new product
+                        setProducts(prev => [payload.new, ...prev]);
+                    } else if (payload.eventType === 'DELETE') {
+                        // Remove deleted product
+                        setProducts(prev => prev.filter(item => item.id !== payload.old.id));
+                        setFilteredProducts(prev => prev.filter(item => item.id !== payload.old.id));
+                    }
+                    
+                    // Update last refresh time
+                    setLastRefresh(new Date());
+                }
+            )
+            .subscribe();
+
+        // Cleanup subscription
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
 
     useEffect(() => {
         setFilteredProducts(products);
@@ -726,6 +803,13 @@ const InventoryTable = ({ onStatsUpdate }) => {
         try {
             console.log('Saving product with form data:', formData);
             
+            // Validate price
+            const price = parseFloat(formData.price);
+            if (isNaN(price) || price < 0) {
+                alert('Please enter a valid price (must be a positive number)');
+                return;
+            }
+            
             // Get current user session for added_by
             const userSession = localStorage.getItem('user_session');
             const sessionData = userSession ? JSON.parse(userSession) : null;
@@ -741,7 +825,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
                     .insert({
                         item_name: formData.name,
                         description: formData.description || '',
-                        price: parseFloat(formData.price),
+                        price: price, // Use validated price
                         category: formData.category,
                         image_url: formData.image || '',
                         min_to_cook: parseInt(formData.deliveryTime) || 0,
@@ -764,7 +848,7 @@ const InventoryTable = ({ onStatsUpdate }) => {
                     .update({
                         item_name: formData.name,
                         description: formData.description || '',
-                        price: parseFloat(formData.price),
+                        price: price, // Use validated price
                         category: formData.category,
                         image_url: formData.image || '',
                         min_to_cook: parseInt(formData.deliveryTime) || 0,
@@ -780,6 +864,12 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 if (error) throw error;
                 setProducts(prev => prev.map(product => product.id === editingProduct.id ? updatedProduct : product));
                 console.log('Product updated successfully:', updatedProduct);
+                
+                // Show success message for price updates
+                if (editingProduct.price !== price) {
+                    console.log(`Price updated from ₹${editingProduct.price} to ₹${price}`);
+                    showNotification(`Price updated for ${editingProduct.item_name} to ₹${price.toFixed(2)}`, 'success');
+                }
             }
             
             // Close modal
@@ -890,6 +980,24 @@ const InventoryTable = ({ onStatsUpdate }) => {
                 </div>
             </div>
 
+            {/* Notification */}
+            {notification && (
+                <div className={`mb-4 p-4 rounded-lg border ${
+                    notification.type === 'success' 
+                        ? 'bg-green-50 border-green-200 text-green-800' 
+                        : 'bg-red-50 border-red-200 text-red-800'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        {notification.type === 'success' ? (
+                            <CheckCircle size={20} className="text-green-600" />
+                        ) : (
+                            <AlertCircle size={20} className="text-red-600" />
+                        )}
+                        <span className="font-medium">{notification.message}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Table */}
             <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-sm">
@@ -964,7 +1072,14 @@ const InventoryTable = ({ onStatsUpdate }) => {
                                     <CategoryBadge category={product.category} />
                                 </td>
                                 <td className="p-4">
-                                    <p className="font-bold text-gray-800">₹{product.price}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-bold text-gray-800">₹{parseFloat(product.price || 0).toFixed(2)}</p>
+                                        {product.price !== editingProduct?.price && editingProduct && (
+                                            <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                                                Updated
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="p-4">
                                     <div>
