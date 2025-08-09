@@ -118,7 +118,7 @@ const ProfilePage = () => {
   // Get display information
   const displayName = getDisplayName(userSession);
   const displayEmail = getDisplayEmail(userSession);
-  const avatarUrl = generateAvatarFromEmail(displayEmail, 200, 'avataaars');
+  const avatarUrl = '/profile1.JPG';
   const initials = generateInitials(displayEmail, displayName);
 
   return (
@@ -148,8 +148,12 @@ const ProfilePage = () => {
               <Card className="sticky top-8">
                 <CardHeader className="text-center pb-4">
                   <div className="mx-auto mb-4">
-                    <Avatar className="w-24 h-24 border-4 border-amber-200">
-                      <AvatarImage src={avatarUrl} alt={displayName} />
+                    <Avatar className="w-28 h-28 border-4 border-amber-200 shadow-2xl hover:shadow-amber-200/50 transition-all duration-300 transform hover:scale-105">
+                      <AvatarImage 
+                        src={avatarUrl} 
+                        alt={displayName}
+                        className="object-cover"
+                      />
                       <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-3xl">
                         {initials}
                       </AvatarFallback>

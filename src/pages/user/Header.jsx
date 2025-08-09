@@ -29,7 +29,7 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
   // Get display information from user session
   const displayName = getDisplayName(userSession);
   const displayEmail = getDisplayEmail(userSession);
-  const avatarUrl = generateAvatarFromEmail(displayEmail, 200, 'avataaars');
+  const avatarUrl = '/profile.JPG';
   const initials = generateInitials(displayEmail, displayName);
 
   return (
@@ -44,9 +44,6 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
             {initials}
           </AvatarFallback>
         </Avatar>
-        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
-          isOpen ? 'rotate-180' : ''
-        }`} />
       </button>
 
       {/* Dropdown Menu */}
@@ -56,7 +53,7 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
           <div className="px-4 py-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <Avatar className="w-12 h-12 border-2 border-amber-200">
-                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarImage src="/profile.JPG" alt={displayName} />
                 <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-xl">
                   {initials}
                 </AvatarFallback>
@@ -92,7 +89,6 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
                   <p className="font-medium">Manage Account</p>
                   <p className="text-xs text-gray-500">Profile settings and preferences</p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400 rotate-[-90deg]" />
               </Link>
             </div>
 

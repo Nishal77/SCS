@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Coffee, AlertCircle } from 'lucide-react';
+import { Clock, Coffee, ChefHat } from 'lucide-react';
 import { getCanteenStatus } from '../../../lib/canteen-utils';
 import BlurVignette from "@/components/ui/blur-vignette"
 
@@ -24,6 +24,7 @@ const Mitelive = () => {
 
   return (
     <div className="mb-8">
+      
       <div className="relative max-w-7xl w-full mx-auto">
         <BlurVignette
           radius="24px"
@@ -53,14 +54,11 @@ const Mitelive = () => {
                 }`}>
                   {status.isOpen ? (
                     <div className="relative">
-                      <Coffee className="w-5 h-5 text-emerald-100 drop-shadow-lg" />
-                      {/* Live effect pulse */}
-                      <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping"></div>
-                      <div className="absolute inset-0 rounded-full bg-emerald-400/20 animate-pulse"></div>
+                      
                     </div>
                   ) : (
                     <div className="relative">
-                      <AlertCircle className="w-5 h-5 text-red-100 drop-shadow-lg" />
+                      <ChefHat className="w-5 h-5 text-red-100 drop-shadow-lg" />
                       {/* Closed state pulse effect */}
                       <div className="absolute inset-0 rounded-full bg-red-400/20 animate-pulse"></div>
                     </div>
@@ -70,7 +68,7 @@ const Mitelive = () => {
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
                     <h2 className={`text-lg font-bold drop-shadow-lg ${
-                      status.isOpen ? 'text-emerald-100' : 'text-red-100'
+                      status.isOpen ? 'text-emerald-100' : 'text-white'
                     }`}>
                       {status.isOpen ? 'Canteen is Open!' : 'Canteen is Closed'}
                     </h2>
@@ -82,7 +80,7 @@ const Mitelive = () => {
                     }`}></div>
                   </div>
                   <p className={`font-medium text-sm drop-shadow-md ${
-                    status.isOpen ? 'text-emerald-200' : 'text-red-200'
+                    status.isOpen ? 'text-emerald-200' : 'text-white'
                   }`}>
                     {status.timeUntil}
                   </p>
