@@ -7,7 +7,7 @@ const Mitelive = () => {
   const [status, setStatus] = useState(getCanteenStatus());
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
+    useEffect(() => {
     const updateStatus = () => {
       setStatus(getCanteenStatus());
       setCurrentTime(new Date());
@@ -15,10 +15,10 @@ const Mitelive = () => {
 
     // Update immediately
     updateStatus();
-    
-    // Update every minute
-    const interval = setInterval(updateStatus, 60000);
-    
+
+    // Update every second for real-time seconds
+    const interval = setInterval(updateStatus, 1000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -49,25 +49,41 @@ const Mitelive = () => {
                 <div className={`p-3 rounded-xl ${
                   status.isOpen 
                     ? 'bg-gradient-to-br from-emerald-400/40 to-green-500/40 text-emerald-100 border border-emerald-300/50 shadow-lg' 
-                    : 'bg-white/20 text-white'
+                    : 'bg-gradient-to-br from-red-500/40 to-rose-600/40 text-red-100 border border-red-300/50 shadow-xl'
                 }`}>
                   {status.isOpen ? (
                     <div className="relative">
-                      <Coffee className="w-6 h-6 text-emerald-100 drop-shadow-lg" />
+                      <Coffee className="w-5 h-5 text-emerald-100 drop-shadow-lg" />
                       {/* Live effect pulse */}
                       <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping"></div>
                       <div className="absolute inset-0 rounded-full bg-emerald-400/20 animate-pulse"></div>
                     </div>
                   ) : (
-                    <AlertCircle className="w-6 h-6" />
+                    <div className="relative">
+                      <AlertCircle className="w-5 h-5 text-red-100 drop-shadow-lg" />
+                      {/* Closed state pulse effect */}
+                      <div className="absolute inset-0 rounded-full bg-red-400/20 animate-pulse"></div>
+                    </div>
                   )}
                 </div>
                 
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
-                    {status.isOpen ? 'Canteen is Open!' : 'Canteen is Closed'}
-                  </h2>
-                  <p className="text-white font-semibold text-lg drop-shadow-md">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h2 className={`text-lg font-bold drop-shadow-lg ${
+                      status.isOpen ? 'text-emerald-100' : 'text-red-100'
+                    }`}>
+                      {status.isOpen ? 'Canteen is Open!' : 'Canteen is Closed'}
+                    </h2>
+                    {/* Live status dot */}
+                    <div className={`w-2 h-2 rounded-full ${
+                      status.isOpen 
+                        ? 'bg-emerald-400 animate-pulse' 
+                        : 'bg-red-400 animate-pulse'
+                    }`}></div>
+                  </div>
+                  <p className={`font-medium text-sm drop-shadow-md ${
+                    status.isOpen ? 'text-emerald-200' : 'text-red-200'
+                  }`}>
                     {status.timeUntil}
                   </p>
                 </div>
@@ -75,11 +91,12 @@ const Mitelive = () => {
               
               <div className="text-right">
                 <div className="flex items-center space-x-2 text-white mb-2">
-                  <Clock className="w-4 h-4 drop-shadow-md" />
-                  <span className="text-sm font-bold drop-shadow-md">
+                  <Clock className="w-3 h-3 drop-shadow-md" />
+                  <span className="text-xs font-bold drop-shadow-md">
                     {currentTime.toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
                       minute: '2-digit',
+                      second: '2-digit',
                       hour12: true 
                     })}
                   </span>
@@ -88,9 +105,17 @@ const Mitelive = () => {
                 <div className={`px-4 py-2 rounded-full text-sm font-bold ${
                   status.isOpen 
                     ? 'bg-gradient-to-r from-emerald-400/40 to-green-500/40 text-white border-2 border-emerald-300/60 shadow-xl' 
-                    : 'bg-white/30 text-white border-2 border-white/50 shadow-lg'
+                    : 'bg-gradient-to-r from-red-500/40 to-rose-600/40 text-red-100 border-2 border-red-300/60 shadow-xl'
                 }`}>
-                  {status.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+                  <div className="flex items-center space-x-2">
+                    <span>{status.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}</span>
+                    {/* Live status dot */}
+                    <div className={`w-2 h-2 rounded-full ${
+                      status.isOpen 
+                        ? 'bg-emerald-400 animate-pulse' 
+                        : 'bg-red-400 animate-pulse'
+                    }`}></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -98,8 +123,8 @@ const Mitelive = () => {
             {/* Hours Info */}
             <div className="relative z-10 mt-auto pt-4 border-t border-white/40">
               <div className="flex items-center justify-between text-white text-sm font-bold drop-shadow-md">
-                <span className="px-3 py-2 rounded-lg bg-white/20 backdrop-blur-md border border-white/30">🕕 Opening Hours: {status.openTime} - {status.closeTime}</span>
-                <span>📅 {currentTime.toLocaleDateString('en-US', { 
+                <span className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-lg border border-white/30 shadow-lg hover:shadow-white/20 transition-all duration-300">🕕 Opening Hours: {status.openTime} - {status.closeTime}</span>
+                <span className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-lg border border-white/30 shadow-lg hover:shadow-white/20 transition-all duration-300">📅 {currentTime.toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   year: 'numeric', 
                   month: 'long', 
