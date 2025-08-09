@@ -160,15 +160,18 @@ const FoodItemCard = ({ item }) => {
             <div className="p-4">
                 <div className="flex items-start justify-between">
                     <h3 className="text-lg font-bold text-gray-900 truncate flex-1 pr-2">{item.name}</h3>
-                    {/* Stock indicator moved to top right */}
+                    {/* Enhanced Stock indicator with wow styling */}
                     <div className="flex items-center flex-shrink-0">
-                        <div className={`w-2 h-2 rounded-full mr-1 ${
-                            item.stockAvailable > 10 ? 'bg-green-500' : 
-                            item.stockAvailable > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            item.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
+                            item.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
                         }`}></div>
-                        <span className={`text-xs font-medium ${
-                            item.stockAvailable > 10 ? 'text-green-600' : 
-                            item.stockAvailable > 0 ? 'text-yellow-600' : 'text-red-600'
+                        <span className={`text-[10px] font-medium tracking-wide ${
+                            item.stockAvailable > 10 
+                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full' : 
+                            item.stockAvailable > 0 
+                                ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full' : 
+                                'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full'
                         }`}>
                             {item.stockAvailable > 10 ? 'In Stock' : 
                              item.stockAvailable > 0 ? `${item.stockAvailable} left` : 'Out of Stock'}
@@ -191,11 +194,13 @@ const FoodItemCard = ({ item }) => {
                             className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                 stockStatus.canOrder && !addingToCart
                                     ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md' 
-                                    : 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                                    : 'border-gray-200 text-gray-500 cursor-not-allowed bg-gray-50 shadow-sm'
                             }`}
                         >
-                            <Plus className="w-4 h-4"/>
-                            {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
+                            <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-60' : ''}`}/>
+                            <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : ''}>
+                                {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
+                            </span>
                         </button>
                     </div>
                     

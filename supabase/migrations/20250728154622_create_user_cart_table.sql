@@ -61,3 +61,4 @@ CREATE POLICY "Users can update their own cart items" ON user_cart
 
 CREATE POLICY "Users can delete their own cart items" ON user_cart
     FOR DELETE USING (auth.uid() = user_id);
+
