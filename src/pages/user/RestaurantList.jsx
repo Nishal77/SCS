@@ -123,126 +123,156 @@ const FilterBar = ({ activeFilter, setActiveFilter }) => {
 
 // --- Restaurant Card Component (with Price and Add button, offer removed) ---
 const RestaurantCard = ({ restaurant }) => {
-    const navigate = useNavigate();
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
     
-    // Get stock status for this product
     const stockStatus = getStockStatus(restaurant.stockAvailable);
     
     const handleAddClick = async () => {
-        if (!stockStatus.canOrder) {
-            setCartMessage('Product is out of stock');
-            setTimeout(() => setCartMessage(''), 3000);
-            return;
-        }
+        if (!stockStatus.canOrder) return;
         
         setAddingToCart(true);
         setCartMessage('');
         
         try {
-            const result = await handleAddToCart(navigate, restaurant.id, 1);
-            
+            const result = await handleAddToCart(restaurant.id, 1);
             if (result.success) {
                 setCartMessage('✅ Added to cart successfully!');
-                // Don't update local stock here - let the real-time subscription handle it
-                // The stock will be updated from the database via real-time updates
+                // Refresh page to get updated stock data
+                setTimeout(() => window.location.reload(), 1500);
             } else {
                 setCartMessage(`❌ ${result.error}`);
-                // If stock error, refresh the product data to get updated stock
                 if (result.error.includes('stock') || result.error.includes('Stock')) {
-                    // Trigger a refresh of the product data
-                    window.location.reload();
+                    // Refresh page to get updated stock data
+                    setTimeout(() => window.location.reload(), 2000);
                 }
             }
         } catch (error) {
             setCartMessage('❌ Failed to add to cart');
-            console.error('Error adding to cart:', error);
         } finally {
             setAddingToCart(false);
-            setTimeout(() => setCartMessage(''), 3000);
         }
     };
 
     return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ease-in-out hover:scale-[0.98] active:scale-[0.96] group border border-gray-100">
-        <div className="relative">
-            <img 
-                src={restaurant.image} 
-                alt={restaurant.name} 
-                className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
-                onError={(e) => { 
-                    console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
-                    // Try to load a fallback image
-                    if (!e.target.dataset.fallbackAttempted) {
-                        e.target.dataset.fallbackAttempted = 'true';
-                        e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
-                    } else {
-                        // If fallback also fails, hide the image
-                        e.target.style.display = 'none';
-                    }
-                }}
-            />
-        </div>
-        <div className="p-4 flex flex-col flex-grow">
-            <div className="flex items-start justify-between">
-                <h3 className="text-base font-semibold text-gray-900 truncate flex-1 pr-2">{restaurant.name}</h3>
-                {/* Enhanced Stock indicator with wow styling */}
-                <div className="flex items-center flex-shrink-0">
-                    <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        restaurant.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
-                        restaurant.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
-                    }`}></div>
-                    <span className={`text-[10px] font-medium tracking-wide ${
-                        restaurant.stockAvailable > 10 
-                            ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full' : 
-                        restaurant.stockAvailable > 0 
-                            ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full' : 
-                            'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full'
-                    }`}>
-                        {restaurant.stockAvailable > 10 ? 'In Stock' : 
-                         restaurant.stockAvailable > 0 ? `${restaurant.stockAvailable} left` : 'Out of Stock'}
-                    </span>
-                </div>
-            </div>
-            <div className="flex items-center mt-1 text-gray-800">
-                <Star className="w-4 h-4 text-green-600 fill-current" /> {/* w-5 h-5 -> w-4 h-4 */}
-                <span className="ml-1 font-bold text-sm">{restaurant.rating}</span> {/* ml-1.5 -> ml-1, text-sm */}
-                <span className="mx-2 text-gray-300">•</span>
-                <span className="font-medium text-xs">{restaurant.deliveryTime}</span> {/* text-sm -> text-xs */}
-            </div>
-            <p className="mt-1 text-gray-500 text-xs truncate">{restaurant.cuisine}</p> {/* mt-1.5 -> mt-1, text-sm -> text-xs */}
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                <p className="text-xl font-extrabold text-black">₹{restaurant.price}</p>
-                <button 
-                    onClick={handleAddClick}
-                    disabled={!stockStatus.canOrder || addingToCart}
-                    className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
-                        stockStatus.canOrder && !addingToCart
-                            ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md' 
-                            : 'border-gray-200 text-gray-500 cursor-not-allowed bg-gray-50 shadow-sm'
+        <div className={`h-full flex flex-col bg-white shadow-sm border rounded-xl overflow-hidden transition-all duration-300 ${
+            !stockStatus.canOrder 
+                ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
+                : 'hover:shadow-md hover:scale-[1.02] border-gray-100'
+        }`}>
+            <div className="relative h-40 overflow-hidden">
+                <img 
+                    src={restaurant.image} 
+                    alt={restaurant.name} 
+                    className={`w-full h-full object-cover transition-transform duration-300 ${
+                        stockStatus.canOrder ? 'group-hover:scale-105' : ''
                     }`}
-                >
-                    <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-60' : ''}`}/>
-                    <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : ''}>
-                        {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
-                    </span>
-                </button>
+                    onError={(e) => { 
+                        console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
+                        // Try to load a fallback image
+                        if (!e.target.dataset.fallbackAttempted) {
+                            e.target.dataset.fallbackAttempted = 'true';
+                            e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&h=400&fit=crop';
+                        } else {
+                            // If fallback also fails, hide the image
+                            e.target.style.display = 'none';
+                        }
+                    }}
+                />
+                <div className={`absolute inset-0 transition-all duration-300 ${
+                    !stockStatus.canOrder 
+                        ? 'bg-gray-900/30' 
+                        : 'bg-gradient-to-t from-black/20 via-transparent to-transparent'
+                }`}></div>
+                
+                {/* Overlay for out of stock items */}
+                {!stockStatus.canOrder && (
+                    <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                            <span className="text-xs font-semibold text-gray-700 tracking-wide">
+                                OUT OF STOCK
+                            </span>
+                        </div>
+                    </div>
+                )}
             </div>
-            
-            {/* Cart message displayed below the button */}
-            {cartMessage && (
-                <div className={`text-xs px-3 py-2 rounded-lg mt-3 text-center font-medium ${
-                    cartMessage.includes('✅') 
-                        ? 'bg-green-50 text-green-700 border border-green-200' 
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
-                    {cartMessage}
+            <div className={`p-4 flex flex-col flex-grow ${
+                !stockStatus.canOrder ? 'text-gray-500' : ''
+            }`}>
+                <div className="flex items-start justify-between">
+                    <h3 className={`text-base font-semibold truncate flex-1 pr-2 ${
+                        !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
+                    }`}>{restaurant.name}</h3>
+                    {/* Enhanced Stock indicator with wow styling */}
+                    <div className="flex items-center flex-shrink-0">
+                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            restaurant.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
+                            restaurant.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
+                        }`}></div>
+                        <span className={`text-[10px] font-medium tracking-wide ${
+                            restaurant.stockAvailable > 10 
+                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full' : 
+                            restaurant.stockAvailable > 0 
+                                ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full' : 
+                                'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full'
+                        }`}>
+                            {restaurant.stockAvailable > 10 ? 'In Stock' : 
+                             restaurant.stockAvailable > 0 ? `${restaurant.stockAvailable} left` : 'Out of Stock'}
+                        </span>
+                    </div>
                 </div>
-            )}
+                <div className={`flex items-center mt-1 ${
+                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-800'
+                }`}>
+                    <Star className={`w-4 h-4 fill-current ${
+                        !stockStatus.canOrder ? 'text-gray-400' : 'text-green-600'
+                    }`} />
+                    <span className={`ml-1 font-bold text-sm ${
+                        !stockStatus.canOrder ? 'text-gray-400' : ''
+                    }`}>{restaurant.rating}</span>
+                    <span className="mx-2 text-gray-300">•</span>
+                    <span className={`font-medium text-xs ${
+                        !stockStatus.canOrder ? 'text-gray-400' : ''
+                    }`}>{restaurant.deliveryTime}</span>
+                </div>
+                <p className={`mt-1 text-xs truncate ${
+                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-500'
+                }`}>{restaurant.cuisine}</p>
+                <div className="mt-auto pt-4">
+                    <div className="flex items-center justify-between">
+                        <p className={`text-xl font-extrabold ${
+                            !stockStatus.canOrder ? 'text-gray-400' : 'text-black'
+                        }`}>₹{restaurant.price}</p>
+                        <button 
+                            onClick={handleAddClick}
+                            disabled={!stockStatus.canOrder || addingToCart}
+                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
+                                stockStatus.canOrder && !addingToCart
+                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95' 
+                                    : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
+                            }`}
+                        >
+                            <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-40' : ''}`}/>
+                            <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : ''}>
+                                {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
+                            </span>
+                        </button>
+                    </div>
+                    
+                    {/* Cart message displayed below the button */}
+                    {cartMessage && (
+                        <div className={`text-xs px-3 py-2 rounded-lg mt-3 text-center font-medium ${
+                            cartMessage.includes('✅') 
+                                ? 'bg-green-50 text-green-700 border border-green-200' 
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            {cartMessage}
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-    </div>
-);
+    );
 };
 
 // --- Main Restaurant Page Component ---

@@ -95,55 +95,51 @@ const useTodaySpecialData = () => {
 
 // --- Food Item Card Component (Updated with smaller size) ---
 const FoodItemCard = ({ item }) => {
-    const navigate = useNavigate();
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
     
-    // Get stock status for this product
     const stockStatus = getStockStatus(item.stockAvailable);
     
     const handleAddClick = async () => {
-        if (!stockStatus.canOrder) {
-            setCartMessage('Product is out of stock');
-            setTimeout(() => setCartMessage(''), 3000);
-            return;
-        }
+        if (!stockStatus.canOrder) return;
         
         setAddingToCart(true);
         setCartMessage('');
         
         try {
-            const result = await handleAddToCart(navigate, item.id, 1);
-            
+            const result = await handleAddToCart(item.id, 1);
             if (result.success) {
                 setCartMessage('✅ Added to cart successfully!');
-                // Don't update local stock here - let the real-time subscription handle it
-                // The stock will be updated from the database via real-time updates
+                // Refresh page to get updated stock data
+                setTimeout(() => window.location.reload(), 1500);
             } else {
                 setCartMessage(`❌ ${result.error}`);
-                // If stock error, refresh the product data to get updated stock
                 if (result.error.includes('stock') || result.error.includes('Stock')) {
-                    // Trigger a refresh of the product data
-                    window.location.reload();
+                    // Refresh page to get updated stock data
+                    setTimeout(() => window.location.reload(), 2000);
                 }
             }
         } catch (error) {
             setCartMessage('❌ Failed to add to cart');
-            console.error('Error adding to cart:', error);
         } finally {
             setAddingToCart(false);
-            setTimeout(() => setCartMessage(''), 3000);
         }
     };
 
     return (
-        <div className="flex-shrink-0 w-72 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ease-in-out group border border-gray-100">
-            <div className="relative">
+        <div className={`h-full flex flex-col bg-white shadow-sm border rounded-xl overflow-hidden transition-all duration-300 ${
+            !stockStatus.canOrder 
+                ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
+                : 'hover:shadow-md hover:scale-[1.02] border-gray-100'
+        }`}>
+            <div className="relative h-40 overflow-hidden">
                 <img 
                     src={item.image} 
                     alt={item.name} 
-                    className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { 
+                    className={`w-full h-full object-cover transition-transform duration-300 ${
+                        stockStatus.canOrder ? 'group-hover:scale-105' : ''
+                    }`}
+                    onError={(e) => {
                         console.log(`❌ Image failed to load for ${item.name}:`, item.image);
                         // Try to load a fallback image
                         if (!e.target.dataset.fallbackAttempted) {
@@ -155,11 +151,30 @@ const FoodItemCard = ({ item }) => {
                         }
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                <div className={`absolute inset-0 transition-all duration-300 ${
+                    !stockStatus.canOrder 
+                        ? 'bg-gray-900/30' 
+                        : 'bg-gradient-to-t from-black/20 via-transparent to-transparent'
+                }`}></div>
+                
+                {/* Overlay for out of stock items */}
+                {!stockStatus.canOrder && (
+                    <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                            <span className="text-xs font-semibold text-gray-700 tracking-wide">
+                                OUT OF STOCK
+                            </span>
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="p-4">
+            <div className={`p-4 flex flex-col flex-grow ${
+                !stockStatus.canOrder ? 'text-gray-500' : ''
+            }`}>
                 <div className="flex items-start justify-between">
-                    <h3 className="text-lg font-bold text-gray-900 truncate flex-1 pr-2">{item.name}</h3>
+                    <h3 className={`text-lg font-bold truncate flex-1 pr-2 ${
+                        !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
+                    }`}>{item.name}</h3>
                     {/* Enhanced Stock indicator with wow styling */}
                     <div className="flex items-center flex-shrink-0">
                         <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
@@ -178,26 +193,38 @@ const FoodItemCard = ({ item }) => {
                         </span>
                     </div>
                 </div>
-                <div className="flex items-center mt-1.5 text-gray-700">
-                    <Star className="w-5 h-5 text-green-600 fill-current" />
-                    <span className="ml-1.5 font-semibold">{item.rating}</span>
+                <div className={`flex items-center mt-1.5 ${
+                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-700'
+                }`}>
+                    <Star className={`w-5 h-5 fill-current ${
+                        !stockStatus.canOrder ? 'text-gray-400' : 'text-green-600'
+                    }`} />
+                    <span className={`ml-1.5 font-semibold ${
+                        !stockStatus.canOrder ? 'text-gray-400' : ''
+                    }`}>{item.rating}</span>
                     <span className="mx-2 text-gray-300">•</span>
-                    <span className="font-medium text-sm">{item.deliveryTime}</span>
+                    <span className={`font-medium text-sm ${
+                        !stockStatus.canOrder ? 'text-gray-400' : ''
+                    }`}>{item.deliveryTime}</span>
                 </div>
-                <p className="mt-1.5 text-gray-500 text-sm truncate">{item.cuisine}</p>
-                <div className="mt-4 flex flex-col gap-2">
+                <p className={`mt-1.5 text-sm truncate ${
+                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-500'
+                }`}>{item.cuisine}</p>
+                <div className="mt-auto pt-4">
                     <div className="flex items-center justify-between">
-                        <p className="text-xl font-extrabold text-gray-900">{formatPriceWithCurrency(item.price)}</p>
+                        <p className={`text-xl font-extrabold ${
+                            !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-900'
+                        }`}>{formatPriceWithCurrency(item.price)}</p>
                         <button 
                             onClick={handleAddClick}
                             disabled={!stockStatus.canOrder || addingToCart}
-                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
-                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md' 
-                                    : 'border-gray-200 text-gray-500 cursor-not-allowed bg-gray-50 shadow-sm'
+                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95' 
+                                    : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
                             }`}
                         >
-                            <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-60' : ''}`}/>
+                            <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-40' : ''}`}/>
                             <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : ''}>
                                 {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
                             </span>

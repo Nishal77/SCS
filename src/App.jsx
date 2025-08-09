@@ -6,6 +6,7 @@ import StaffDashboard from './routes/StaffDashboard'
 import Contact from './pages/user/contact.jsx'
 import Cart from './pages/user/cart.jsx'
 import Order from './pages/user/order.jsx'
+import Profile from './pages/user/profile.jsx'
 import Login from './pages/auth/Login.jsx'
 
 // Session check component
@@ -74,6 +75,11 @@ function App() {
         <Route path="/user/order" element={
           <ProtectedRoute>
             <Order />
+          </ProtectedRoute>
+        } />
+        <Route path="/user/profile" element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         } />
         <Route path="/auth/login" element={<Login />} />

@@ -1,10 +1,129 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn, RefreshCw } from 'lucide-react';
+import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn, RefreshCw, Coffee, AlertCircle, User, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from 'react-router-dom';
 import supabase from '../../lib/supabase';
 
+import { generateAvatarFromEmail, generateInitials, getDisplayName, getDisplayEmail } from '../../lib/avatar-utils';
 
+
+
+// Profile Dropdown Component
+const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.profile-dropdown')) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  // Get display information from user session
+  const displayName = getDisplayName(userSession);
+  const displayEmail = getDisplayEmail(userSession);
+  const avatarUrl = generateAvatarFromEmail(displayEmail, 200, 'avataaars');
+  const initials = generateInitials(displayEmail, displayName);
+
+  return (
+    <div className="relative profile-dropdown">
+      <button
+        onClick={toggleDropdown}
+        className="flex items-center gap-3 p-2 rounded-full hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+      >
+        <Avatar className="w-10 h-10 border-2 border-gray-200 hover:border-amber-400 transition-colors">
+          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-lg">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
+          isOpen ? 'rotate-180' : ''
+        }`} />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+          {/* User Info Section */}
+          <div className="px-4 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-12 h-12 border-2 border-amber-200">
+                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-xl">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {displayName}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {displayEmail}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Menu Items */}
+          <div className="py-2">
+            {/* Manage Account Section */}
+            <div className="px-4 py-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Account
+              </h3>
+              
+              <Link
+                to="/user/profile"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 group"
+                onClick={() => setIsOpen(false)}
+              >
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                  <User className="w-4 h-4 text-gray-600 group-hover:text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">Manage Account</p>
+                  <p className="text-xs text-gray-500">Profile settings and preferences</p>
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400 rotate-[-90deg]" />
+              </Link>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 my-3 mx-4"></div>
+
+            {/* Logout Section */}
+            <div className="px-4">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onLogout();
+                }}
+                disabled={isLoggingOut}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                  <LogOut className="w-4 h-4 text-red-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium">{isLoggingOut ? 'Logging out...' : 'Sign out'}</p>
+                  <p className="text-xs text-red-500">End your current session</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // --- Header Component with Live Location ---
 const Header = () => {
@@ -98,121 +217,96 @@ const Header = () => {
         };
 
         const getLocation = () => {
+            setLoading(true);
+            setError(null);
+            
             if (navigator.geolocation) {
-                setLoading(true);
-                setError(null);
-                
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const { latitude, longitude } = position.coords;
                         setCoords({ latitude, longitude });
-                        setLoading(false);
-                        console.log('Location obtained:', { latitude, longitude });
-                        
-                        // Get address from coordinates
                         getAddressFromCoords(latitude, longitude);
+                        setLoading(false);
                     },
                     (error) => {
-                        setError("Unable to fetch location: " + error.message);
+                        console.error('Geolocation error:', error);
+                        setError('Location access denied');
                         setLoading(false);
-                        console.error('Location error:', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000 // 5 minutes
                     }
                 );
             } else {
-                setError("Geolocation is not supported by this browser.");
+                setError('Geolocation not supported');
+                setLoading(false);
             }
         };
 
-        // Get location on component mount
         useEffect(() => {
             getLocation();
         }, []);
-        
-        return (
-            <div className={`flex items-center gap-2 sm:gap-3 text-gray-600 border border-gray-200/80 rounded-lg ${
-                compact 
-                    ? 'px-2 sm:px-3 py-2 sm:py-2.5' 
-                    : 'px-4 py-3'
-            }`}>
-                <MapPin className={`w-4 h-4 text-gray-400 ${
-                    compact ? 'sm:w-5 sm:h-5' : 'w-5 h-5'
-                }`}/>
-                <div className="flex flex-col min-w-0">
-                    {loading ? (
-                        <div className="flex items-center gap-1 sm:gap-2">
-                            <div className={`w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin ${
-                                compact ? 'sm:w-4 sm:h-4' : 'w-4 h-4'
-                            }`}></div>
-                            <span className={`font-medium text-gray-600 ${
-                                compact ? 'text-sm sm:text-base' : 'text-base'
-                            }`}>Getting location...</span>
-                        </div>
-                    ) : error ? (
-                        <div className="flex flex-col gap-1 sm:gap-2">
-                            <span className={`text-red-500 font-medium ${
-                                compact ? 'text-sm sm:text-base' : 'text-base'
-                            }`}>{error}</span>
-                            <button 
-                                onClick={getLocation}
-                                className={`text-blue-600 hover:text-blue-800 font-semibold hover:underline ${
-                                    compact ? 'text-sm sm:text-base' : 'text-base'
-                                }`}
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    ) : coords ? (
-                        <div className="flex flex-col">
-                            {address ? (
-                                <span className={`font-semibold text-gray-800 leading-tight ${
-                                    compact ? 'text-base sm:text-lg' : 'text-lg'
-                                }`}>
-                                    {address}
-                                </span>
-                            ) : (
-                                <span className={`font-medium text-gray-600 ${
-                                    compact ? 'text-sm sm:text-base' : 'text-base'
-                                }`}>
-                                    {coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)}
-                                </span>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-1 sm:gap-2">
-                            <span className={`font-medium text-gray-600 ${
-                                compact ? 'text-sm sm:text-base' : 'text-base'
-                            }`}>Location</span>
-                            <button 
-                                onClick={getLocation}
-                                className={`text-blue-600 hover:text-blue-800 font-semibold hover:underline ${
-                                    compact ? 'text-sm sm:text-base' : 'text-base'
-                                }`}
-                            >
-                                Enable
-                            </button>
-                        </div>
-                    )}
+
+        if (compact) {
+            return (
+                <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs text-gray-600 font-medium">
+                        {loading ? 'Getting location...' : address || 'Location' || 'Location'}
+                    </span>
                 </div>
+            );
+        }
+
+        return (
+            <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600 font-medium">
+                    {loading ? 'Getting location...' : address || 'Location'}
+                </span>
+                <button
+                    onClick={getLocation}
+                    disabled={loading}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                >
+                    <RefreshCw className={`w-3 h-3 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                </button>
             </div>
         );
     };
 
-    const ProfileLink = ({ compact = false }) => (
-        <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors px-2 py-2">
-            <Avatar className="w-6 h-6">
-                <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                <AvatarFallback>{userSession?.email_name ? userSession.email_name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-            </Avatar>
-            <p className="font-semibold flex items-center text-sm">
-                {userSession?.email_name || 'User'}
-            </p>
-        </a>
-    );
+    // Profile Link Component (for mobile)
+    const ProfileLink = ({ compact = false }) => {
+        // Get display information from user session
+        const displayName = getDisplayName(userSession);
+        const displayEmail = getDisplayEmail(userSession);
+        const avatarUrl = generateAvatarFromEmail(displayEmail, 200, 'avataaars');
+        const initials = generateInitials(displayEmail, displayName);
 
+        return (
+            <div className="flex items-center gap-2">
+                <Avatar className="w-8 h-8 border-2 border-gray-200">
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                    <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-sm">
+                        {initials}
+                    </AvatarFallback>
+                </Avatar>
+                {!compact && (
+                    <span className="text-sm font-medium text-gray-700">
+                        {displayName}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
+    // Login Button Component
     const LoginButton = () => (
-        <Link to="/auth/login" className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-blue-100 hover:text-blue-600 transition-all">
-            <LogIn className="w-5 h-5" />
-            Login
+        <Link to="/auth/login" className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white font-bold rounded-full text-sm shadow-md hover:bg-amber-600 transform hover:scale-105 transition-all duration-300">
+            <LogIn className="w-4 h-4" />
+            <span>Login</span>
         </Link>
     );
 
@@ -222,13 +316,13 @@ const Header = () => {
                 
                 {/* Mobile & Tablet Header */}
                 <div className="flex items-center justify-between lg:hidden">
-                                    <div className="flex items-center gap-4">
-                    <Logo />
-                    <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-2">
-                       <LocationDisplay compact />
-                       {userSession && <ProfileLink compact />}
+                    <div className="flex items-center gap-4">
+                        <Logo />
+                        <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-2">
+                           <LocationDisplay compact />
+                           {userSession && <ProfileLink compact />}
+                        </div>
                     </div>
-                </div>
                     <div className="flex items-center gap-2">
                         <button className="relative flex items-center gap-3 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transition-all">
                             <ShoppingCart className="w-5 h-5" />
@@ -244,32 +338,32 @@ const Header = () => {
                 <div className="hidden lg:grid grid-cols-3 items-center">
                     <nav className="flex items-center gap-4 text-md font-semibold">
                         <LocationDisplay />
-                        {userSession && <ProfileLink />}
                     </nav>
+                    
                     <div className="flex items-center justify-center gap-8">
                         <Link to="/user/dashboard" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Menu</Link>
                         <Logo />
                         <Link to="/user/contact" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Contact</Link>
                     </div>
-                    <div className="flex items-center justify-end gap-2">
+                    
+                    <div className="flex items-center justify-end gap-3">
                         {userSession ? (
                             <>
-                                <button 
-                                    onClick={handleLogout}
-                                    disabled={isLoggingOut}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-gray-700 font-bold rounded-full text-sm hover:bg-red-100 hover:text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    {isLoggingOut ? 'Logging out...' : 'Logout'}
-                                </button>
-                                <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 mr-3">
+                                <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 transition-colors">
                                     <ShoppingCart className="w-6 h-6" />
                                     <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">3</span>
                                 </Link>
-                                <Link to="/user/order" className="relative flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">
+                                
+                                <Link to="/user/order" className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">
                                     <Truck className="w-5 h-5" />
                                     <span>Orders</span>
                                 </Link>
+                                
+                                <ProfileDropdown 
+                                    userSession={userSession} 
+                                    onLogout={handleLogout} 
+                                    isLoggingOut={isLoggingOut}
+                                />
                             </>
                         ) : (
                             <LoginButton />
