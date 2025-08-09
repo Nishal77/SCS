@@ -1,17 +1,6 @@
-import { Switch } from "@radix-ui/react-switch"
 import React, { useState } from "react"
 
-
-
-interface BlurVignetteProps {
-  children: React.ReactNode
-  className?: string
-  radius?: string
-  inset?: string
-  transitionLength?: string
-  blur?: string
-  switchView?: boolean
-}
+import { Switch } from "@/components/ui/switch"
 
 const BlurVignette = ({
   children,
@@ -20,12 +9,12 @@ const BlurVignette = ({
   radius = "24px",
   inset = "16px",
   transitionLength = "32px",
-  blur = "21px",
-}: BlurVignetteProps) => {
+  blur = "21px"
+}) => {
   const [isEnabled, setIsEnabled] = useState(true)
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    (<div className={`relative overflow-hidden ${className}`}>
       <style>
         {`
           .blur-vignette {
@@ -85,8 +74,8 @@ const BlurVignette = ({
           <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
         )}
       </div>
-    </div>
-  )
+    </div>)
+  );
 }
 
 export default BlurVignette
