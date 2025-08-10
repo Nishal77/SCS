@@ -184,7 +184,7 @@ const RestaurantCard = ({ restaurant }) => {
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
                 : 'hover:shadow-md hover:scale-[1.02] border-gray-100'
         }`}>
-            <div className="relative h-40 overflow-hidden">
+            <div className="relative h-28 overflow-hidden">
                 <img 
                     src={restaurant.image} 
                     alt={restaurant.name} 
@@ -220,29 +220,34 @@ const RestaurantCard = ({ restaurant }) => {
                     </div>
                 )}
             </div>
-            <div className={`p-4 flex flex-col flex-grow ${
+            <div className={`p-2.5 flex flex-col flex-grow ${
                 !stockStatus.canOrder ? 'text-gray-500' : ''
             }`}>
                 <div className="flex items-start justify-between">
-                    <h3 className={`text-base user-item-name truncate flex-1 pr-2 ${
+                    <h3 className={`text-sm user-item-name truncate flex-1 pr-2 ${
                         !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
                     }`}>{restaurant.name}</h3>
-                    {/* Enhanced Stock indicator with wow styling */}
+                    {/* Realistic live status pill with pulse */}
                     <div className="flex items-center flex-shrink-0">
-                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            restaurant.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
-                            restaurant.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
-                        }`}></div>
-                        <span className={`text-[10px] font-medium tracking-wide ${
-                            restaurant.stockAvailable > 10 
-                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full' : 
-                            restaurant.stockAvailable > 0 
-                                ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full' : 
-                                'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full'
-                        }`}>
-                            {restaurant.stockAvailable > 10 ? 'In Stock' : 
-                             restaurant.stockAvailable > 0 ? `${restaurant.stockAvailable} left` : 'Out of Stock'}
-                        </span>
+                        {(() => {
+                            const status = stockStatus.status;
+                            const pill =
+                                status === 'in_stock'
+                                    ? 'text-emerald-700 bg-emerald-100/80 ring-1 ring-emerald-200/60'
+                                    : status === 'low_stock'
+                                    ? 'text-amber-700 bg-amber-100/80 ring-1 ring-amber-200/60'
+                                    : 'text-red-700 bg-red-100/80 ring-1 ring-red-200/60';
+                            const dot = status === 'in_stock' ? 'bg-emerald-500' : status === 'low_stock' ? 'bg-amber-500' : 'bg-red-500';
+                            return (
+                                <span className={`relative inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold ${pill}`} aria-live="polite">
+                                    <span className="relative inline-flex items-center justify-center">
+                                        <span className={`absolute inline-flex w-3 h-3 rounded-full ${dot} opacity-40 animate-ping`}></span>
+                                        <span className={`relative w-2 h-2 rounded-full ${dot}`}></span>
+                                    </span>
+                                    {stockStatus.label}
+                                </span>
+                            );
+                        })()}
                     </div>
                 </div>
                 <div className={`flex items-center mt-1 user-meta ${
@@ -259,18 +264,21 @@ const RestaurantCard = ({ restaurant }) => {
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{restaurant.deliveryTime}</span>
                 </div>
-                <p className={`mt-1 text-xs user-item-desc truncate ${
-                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-500'
-                }`}>{restaurant.cuisine}</p>
+                {/* Full product description */}
+                {restaurant.description && (
+                    <p className={`mt-1 text-xs user-item-desc whitespace-pre-line break-words line-clamp-2 ${
+                        !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-600'
+                    }`}>{restaurant.description}</p>
+                )}
                 <div className="mt-auto pt-4">
-                    <div className="flex items-center justify-between">
-                        <p className={`text-xl user-item-price ${
+                    <div className="flex items-center justify-between mt-2">
+                        <p className={`text-xl font-extrabold ${
                             !stockStatus.canOrder ? 'text-gray-400' : 'text-black'
-                        }`}>₹{restaurant.price}</p>
+                        }`}>₹{restaurant.price}.00</p>
                         <button 
                             onClick={handleAddClick}
                             disabled={!stockStatus.canOrder || addingToCart}
-                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
+                            className={`flex items-center gap-2 h-8 px-3 py-1.5 border-2 font-semibold rounded-lg transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
                                     ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95' 
                                     : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
@@ -305,6 +313,8 @@ export default function App() {
     const [dietaryFilter, setDietaryFilter] = useState('all'); // 'all', 'veg', 'non-veg'
     const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'breakfast', 'lunch', etc.
     const [refreshing, setRefreshing] = useState(false);
+    // Show 3 rows initially; each row has 4 items → 12 items per page
+    const [visibleRows, setVisibleRows] = useState(3);
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -320,17 +330,22 @@ export default function App() {
         
         // Apply dietary filter
         if (dietaryFilter === 'veg') {
-            filtered = filtered.filter(r => r.category.toLowerCase().includes('veg') || r.category.toLowerCase().includes('vegetarian'));
+            filtered = filtered.filter(r => (r.foodType || '').toLowerCase() === 'veg');
         } else if (dietaryFilter === 'non-veg') {
-            filtered = filtered.filter(r => !r.category.toLowerCase().includes('veg') && !r.category.toLowerCase().includes('vegetarian'));
+            filtered = filtered.filter(r => (r.foodType || '').toLowerCase() === 'non-veg');
         }
         
         // Apply category filter
         if (categoryFilter !== 'all') {
             filtered = filtered.filter(r => r.category.toLowerCase().includes(categoryFilter.toLowerCase()));
         }
-        
-        return filtered;
+        // Randomize order for a natural, non-structured layout
+        const shuffled = [...filtered];
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
     }, [dietaryFilter, categoryFilter, products, loading, error]);
 
     // Loading state
@@ -434,11 +449,26 @@ export default function App() {
                         <p className="text-gray-500 text-lg">No menu items found.</p>
                     </div>
                 ) : (
+                <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
-                    {filteredRestaurants.map((restaurant) => (
+                    {filteredRestaurants
+                        .slice(0, visibleRows * 4)
+                        .map((restaurant) => (
                             <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-                    ))}
+                        ))}
                 </div>
+
+                {visibleRows * 4 < filteredRestaurants.length && (
+                    <div className="flex justify-center mt-8">
+                        <button
+                            onClick={() => setVisibleRows((r) => r + 3)}
+                            className="px-6 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 bg-white hover:border-gray-400 hover:bg-gray-50 shadow-sm transition-all"
+                        >
+                            Load more
+                        </button>
+                    </div>
+                )}
+                </>
                 )}
             </div>
         </div>

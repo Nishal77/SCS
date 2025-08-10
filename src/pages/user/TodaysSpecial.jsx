@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Star, Plus, ArrowLeft, ArrowRight } from 'lucide-react';
 import { handleAddToCart } from '../../lib/auth-utils';
 import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
@@ -126,7 +126,7 @@ const FoodItemCard = ({ item }) => {
     };
 
     return (
-        <div className={`h-full flex flex-col bg-white shadow-lg ring-1 ring-gray-900/5 rounded-2xl overflow-hidden transition-all duration-300 ${
+        <div className={`h-full flex flex-col bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:ring-gray-900/10 hover:-translate-y-0.5 ${
             !stockStatus.canOrder 
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
                 : 'border-gray-100'
@@ -208,21 +208,40 @@ const FoodItemCard = ({ item }) => {
                 )}
                 <div className="mt-3 pt-1">
                     <div className="flex items-center justify-between">
-                        {/* In Stock pill */}
-                        <span className={`inline-flex items-center gap-2 h-9 px-4 rounded-full text-[12px] font-semibold shadow-sm ${
-                            item.stockAvailable > 0
-                                ? 'text-emerald-700 bg-emerald-100/80'
-                                : 'text-red-700 bg-red-100/80'
-                        }`}>
-                            <span className={`w-2.5 h-2.5 rounded-full ${item.stockAvailable > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                            {item.stockAvailable > 0 ? 'In Stock' : 'Out of Stock'}
-                        </span>
+                        {/* Live stock status pill with pulse */}
+                        {(() => {
+                            const status = stockStatus.status; // 'in_stock' | 'low_stock' | 'out_of_stock'
+                            const pillClasses =
+                                status === 'in_stock'
+                                    ? 'text-emerald-700 bg-emerald-100/80 ring-1 ring-emerald-200/60'
+                                    : status === 'low_stock'
+                                    ? 'text-amber-700 bg-amber-100/80 ring-1 ring-amber-200/60'
+                                    : 'text-red-700 bg-red-100/80 ring-1 ring-red-200/60';
+                            const dot =
+                                status === 'in_stock'
+                                    ? 'bg-emerald-500'
+                                    : status === 'low_stock'
+                                    ? 'bg-amber-500'
+                                    : 'bg-red-500';
+                            return (
+                                <span
+                                    className={`relative inline-flex items-center gap-2 h-9 px-4 rounded-full text-[12px] font-semibold ${pillClasses}`}
+                                    aria-live="polite"
+                                >
+                                    <span className="relative inline-flex items-center justify-center">
+                                        <span className={`absolute inline-flex w-3.5 h-3.5 rounded-full ${dot} opacity-40 animate-ping`}></span>
+                                        <span className={`relative w-2.5 h-2.5 rounded-full ${dot}`}></span>
+                                    </span>
+                                    {stockStatus.label}
+                                </span>
+                            );
+                        })()}
                         <button 
                             onClick={handleAddClick}
                             disabled={!stockStatus.canOrder || addingToCart}
-                            className={`inline-flex items-center gap-2 h-9 px-5 border-2 font-semibold rounded-full transition-all duration-300 transform shadow-sm ${
+                            className={`inline-flex items-center gap-2 h-9 px-5 border-2 font-semibold rounded-full transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
-                                    ? 'border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-md active:scale-95 bg-white' 
+                                    ? 'border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white active:scale-95 bg-white' 
                                     : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100'
                             }`}
                         >
@@ -254,10 +273,45 @@ const TodaysSpecial = () => {
     const { foodItems, loading, error } = useTodaySpecialData();
     const [refreshing, setRefreshing] = useState(false);
 
+    // Horizontal scroll refs/states
+    const scrollContainerRef = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+
     const handleRefresh = async () => {
         setRefreshing(true);
         // Force a refresh by re-fetching data
         window.location.reload();
+    };
+
+    const scroll = (dir) => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        const amount = Math.min(360, el.offsetWidth * 0.85);
+        el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+    };
+
+    const onMouseDown = (e) => {
+        if (!scrollContainerRef.current) return;
+        setIsDragging(true);
+        setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+        setScrollLeft(scrollContainerRef.current.scrollLeft);
+        scrollContainerRef.current.style.cursor = 'grabbing';
+        scrollContainerRef.current.style.userSelect = 'none';
+    };
+    const onMouseLeaveOrUp = () => {
+        if (!scrollContainerRef.current) return;
+        setIsDragging(false);
+        scrollContainerRef.current.style.cursor = 'grab';
+        scrollContainerRef.current.style.removeProperty('user-select');
+    };
+    const onMouseMove = (e) => {
+        if (!isDragging || !scrollContainerRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - scrollContainerRef.current.offsetLeft;
+        const walk = (x - startX) * 2; // drag speed
+        scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     };
 
     // Loading state
@@ -317,22 +371,49 @@ const TodaysSpecial = () => {
 
     return (
         <div className="font-sans">
-            <div className="container mx-auto">
-                {/* Enhanced Header Section */}
-                <div className="text-left mb-8">
-                  <h2 className="text-xl text-black mb-1 poppins-extrabold">
-                    Hot Picks of the Day
-                  </h2>
-                  <p className="text-sm text-gray-600 poppins-light">
-                    Today's most popular and trending items
-                  </p>
+            <div className="container mx-auto pb-6">
+                {/* Header with navigation controls */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <h2 className="text-xl text-black mb-1 poppins-extrabold">Hot Picks of the Day</h2>
+                      <p className="text-sm text-gray-600 poppins-light">Today's most popular and trending items</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => scroll('left')}
+                        className="p-2 rounded-full bg-white shadow border hover:bg-gray-50"
+                        aria-label="Scroll left"
+                      >
+                        <ArrowLeft className="w-5 h-5 text-gray-700" />
+                      </button>
+                      <button
+                        onClick={() => scroll('right')}
+                        className="p-2 rounded-full bg-white shadow border hover:bg-gray-50"
+                        aria-label="Scroll right"
+                      >
+                        <ArrowRight className="w-5 h-5 text-gray-700" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Enhanced Grid Layout - 2 items per row on small/medium screens */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-                    {foodItems.map((item) => (
-                        <FoodItemCard key={item.id} item={item} />
-                    ))}
+                {/* Horizontal scroll carousel */}
+                <div className="relative pb-2">
+                    <div
+                        ref={scrollContainerRef}
+                        className="flex gap-6 lg:gap-8 overflow-x-auto scrollbar-hide cursor-grab px-1 pb-6"
+                        onMouseDown={onMouseDown}
+                        onMouseLeave={onMouseLeaveOrUp}
+                        onMouseUp={onMouseLeaveOrUp}
+                        onMouseMove={onMouseMove}
+                    >
+                        {foodItems.map((item) => (
+                            <div key={item.id} className="flex-shrink-0 w-[280px]">
+                                <FoodItemCard item={item} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

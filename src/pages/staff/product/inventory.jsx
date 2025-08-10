@@ -258,7 +258,7 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
 
 // Add/Edit Product Modal Component
 const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
-    const [formData, setFormData] = useState({
+    const initialFormState = {
         name: product?.item_name || '',
         description: product?.description || '',
         price: product?.price || '',
@@ -269,7 +269,40 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
         foodType: product?.food_type || 'veg',
         additionalFoodType: product?.additional_food_type || '',
         image: product?.image_url || ''
-    });
+    };
+    const [formData, setFormData] = useState(initialFormState);
+
+    // Reset the form whenever modal opens or context changes (add/edit/product)
+    useEffect(() => {
+        if (isOpen) {
+            setFormData({
+                name: product?.item_name || '',
+                description: product?.description || '',
+                price: product?.price || '',
+                category: product?.category || '',
+                deliveryTime: product?.min_to_cook || '',
+                stockConstant: product?.stock_constant || '',
+                isTodaysSpecial: product?.is_todays_special || false,
+                foodType: product?.food_type || 'veg',
+                additionalFoodType: product?.additional_food_type || '',
+                image: product?.image_url || ''
+            });
+        } else {
+            // When closing, clear the form so next open starts fresh
+            setFormData({
+                name: '',
+                description: '',
+                price: '',
+                category: '',
+                deliveryTime: '',
+                stockConstant: '',
+                isTodaysSpecial: false,
+                foodType: 'veg',
+                additionalFoodType: '',
+                image: ''
+            });
+        }
+    }, [isOpen, mode, product?.id]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -278,6 +311,19 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
             return;
         }
         onSave(formData);
+        // After saving, reset the form so the next open is clean without page reload
+        setFormData({
+            name: '',
+            description: '',
+            price: '',
+            category: '',
+            deliveryTime: '',
+            stockConstant: '',
+            isTodaysSpecial: false,
+            foodType: 'veg',
+            additionalFoodType: '',
+            image: ''
+        });
         onClose();
     };
 

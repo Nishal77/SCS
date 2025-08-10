@@ -101,6 +101,7 @@ export const formatProductForUser = (product) => {
         deliveryTime: `${product.min_to_cook} mins`,
         rating: generateRandomRating(),
         cuisine: product.category,
+        foodType: product.food_type || '',
         stockAvailable: product.stock_available || 0,
         stockConstant: product.stock_constant || 0,
         addedBy: product.profiles?.name || product.profiles?.email_name || 'Staff',
