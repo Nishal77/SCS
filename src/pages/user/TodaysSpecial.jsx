@@ -126,7 +126,7 @@ const FoodItemCard = ({ item }) => {
     };
 
     return (
-        <div className={`h-full flex flex-col bg-white shadow-lg border rounded-xl overflow-hidden transition-all duration-300 ${
+        <div className={`h-full flex flex-col bg-white shadow-lg ring-1 ring-gray-900/5 rounded-2xl overflow-hidden transition-all duration-300 ${
             !stockStatus.canOrder 
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
                 : 'border-gray-100'
@@ -135,7 +135,7 @@ const FoodItemCard = ({ item }) => {
                 <img 
                     src={item.image} 
                     alt={item.name} 
-                    className={`w-full h-full object-cover transition-transform duration-300 ${
+                    className={`w-full h-full object-cover transition-transform duration-300 brightness-95 ${
                         stockStatus.canOrder ? 'group-hover:scale-105' : ''
                     }`}
                     onError={(e) => {
@@ -152,9 +152,18 @@ const FoodItemCard = ({ item }) => {
                 />
                 <div className={`absolute inset-0 transition-all duration-300 ${
                     !stockStatus.canOrder 
-                        ? 'bg-gray-900/30' 
-                        : 'bg-gradient-to-t from-black/20 via-transparent to-transparent'
+                        ? 'bg-gray-900/40' 
+                        : 'bg-gradient-to-t from-black/70 via-black/20 to-transparent'
                 }`}></div>
+                {/* Text overlay at the bottom of the image */}
+                <div className="absolute bottom-2 left-3">
+                    <h2
+                        className="text-white text-2xl font-extrabold tracking-wide"
+                        style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}
+                    >
+                        {`ITEMS AT ${formatPriceWithCurrency(item.price)}`}
+                    </h2>
+                </div>
                 
                 {/* Overlay for out of stock items */}
                 {!stockStatus.canOrder && (
@@ -171,63 +180,54 @@ const FoodItemCard = ({ item }) => {
                 !stockStatus.canOrder ? 'text-gray-500' : ''
             }`}>
                 <div className="flex items-start justify-between">
-                    <h3 className={`text-sm font-semibold flex-1 pr-2 break-words leading-snug ${
-                        !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
-                    }`}>{item.name}</h3>
-                    {/* Enhanced Stock indicator with perfect styling */}
-                    <div className="flex items-center flex-shrink-0">
-                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            item.stockAvailable > 10 ? 'bg-emerald-500 shadow-sm' : 
-                            item.stockAvailable > 0 ? 'bg-amber-500 shadow-sm' : 'bg-red-500 shadow-sm'
-                        }`}></div>
-                        <span className={`text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded-full ${
-                            item.stockAvailable > 10 
-                                ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 
-                            item.stockAvailable > 0 
-                                ? 'text-amber-700 bg-amber-50 border border-amber-200' : 
-                                'text-red-700 bg-red-50 border border-red-200'
-                        }`}>
-                            {item.stockAvailable > 10 ? 'In Stock' : 
-                             item.stockAvailable > 0 ? `${item.stockAvailable} left` : 'Out of Stock'}
-                        </span>
-                    </div>
+                    <h3 className="text-sm font-semibold text-black flex-1 pr-2 break-words leading-snug g-semibold">
+                        {item.name}
+                    </h3>
+                    {/* top-right empty to keep compact */}
+                    <div className="flex-shrink-0" />
                 </div>
-                <div className={`flex items-center mt-1.5 ${
+                <div className={`flex items-center mt-1 user-meta ${
                     !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-700'
                 }`}>
                     <Star className={`w-5 h-5 fill-current ${
                         !stockStatus.canOrder ? 'text-gray-400' : 'text-green-600'
                     }`} />
-                    <span className={`ml-1.5 font-semibold ${
+                    <span className={`ml-1 font-semibold ${
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{item.rating}</span>
                     <span className="mx-2 text-gray-300">•</span>
-                    <span className={`font-medium text-sm ${
+                    <span className={`font-medium ${
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{item.deliveryTime}</span>
                 </div>
                 {/* Show full description for Today's Special; hide category */}
                 {item.description && (
-                    <p className={`mt-1 text-xs whitespace-pre-line break-words leading-relaxed ${
+                    <p className={`mt-1 user-item-desc line-clamp-2 break-words leading-relaxed ${
                         !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-600'
                     }`}>{item.description}</p>
                 )}
-                <div className="mt-3 pt-2">
+                <div className="mt-3 pt-1">
                     <div className="flex items-center justify-between">
-                        <p className={`text-lg font-extrabold ${
-                            !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-900'
-                        }`}>{formatPriceWithCurrency(item.price)}</p>
+                        {/* In Stock pill */}
+                        <span className={`inline-flex items-center gap-2 h-9 px-4 rounded-full text-[12px] font-semibold shadow-sm ${
+                            item.stockAvailable > 0
+                                ? 'text-emerald-700 bg-emerald-100/80'
+                                : 'text-red-700 bg-red-100/80'
+                        }`}>
+                            <span className={`w-2.5 h-2.5 rounded-full ${item.stockAvailable > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                            {item.stockAvailable > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
                         <button 
                             onClick={handleAddClick}
                             disabled={!stockStatus.canOrder || addingToCart}
-                            className={`flex items-center gap-2 px-4 py-2 border font-semibold rounded-lg transition-all duration-300 transform ${
+                            className={`inline-flex items-center gap-2 h-9 px-5 border-2 font-semibold rounded-full transition-all duration-300 transform shadow-sm ${
                                 stockStatus.canOrder && !addingToCart
-                                    ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm' 
-                                    : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
+                                    ? 'border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-md active:scale-95 bg-white' 
+                                    : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100'
                             }`}
                         >
                             <Plus className={`w-4 h-4 ${!stockStatus.canOrder ? 'opacity-40' : ''}`}/>
-                            <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : ''}>
+                            <span className={!stockStatus.canOrder ? 'text-[11px] tracking-wide' : 'text-[12px]'}>
                                 {addingToCart ? 'ADDING...' : (stockStatus.canOrder ? 'ADD' : 'OUT OF STOCK')}
                             </span>
                         </button>
@@ -320,10 +320,10 @@ const TodaysSpecial = () => {
             <div className="container mx-auto">
                 {/* Enhanced Header Section */}
                 <div className="text-left mb-8">
-                  <h2 className="text-xl font-bold text-black mb-1">
+                  <h2 className="text-xl text-black mb-1 poppins-extrabold">
                     Hot Picks of the Day
                   </h2>
-                  <p className="text-sm text-gray-600 font-medium">
+                  <p className="text-sm text-gray-600 poppins-light">
                     Today's most popular and trending items
                   </p>
                 </div>

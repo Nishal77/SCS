@@ -55,8 +55,10 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+import '../pages/user/user-style.css';
+
 const UserDashboard = () => (
-  <div className="bg-stone-50 min-h-screen font-sans flex flex-col">
+  <div className="bg-stone-50 min-h-screen user-root flex flex-col">
     <Header />
     
     {/* Main Content Container */}

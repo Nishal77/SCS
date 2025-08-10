@@ -1,0 +1,52 @@
+/* User-only global styles merged from style.css, now scoped for user UI */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap');
+
+/* Apply Gilroy broadly on user pages */
+.user-root, .user-root * { font-family: 'Poppins', sans-serif; }
+
+/* Hide scrollbar for carousels and horizontal scroll */
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Poppins helpers */
+.poppins-thin { font-family: 'Poppins', sans-serif; font-weight: 100; font-style: normal; }
+.poppins-extralight { font-family: 'Poppins', sans-serif; font-weight: 200; font-style: normal; }
+.poppins-light { font-family: 'Poppins', sans-serif; font-weight: 300; font-style: normal; }
+.poppins-regular { font-family: 'Poppins', sans-serif; font-weight: 400; font-style: normal; }
+.poppins-medium { font-family: 'Poppins', sans-serif; font-weight: 500; font-style: normal; }
+.poppins-semibold { font-family: 'Poppins', sans-serif; font-weight: 600; font-style: normal; }
+.poppins-bold { font-family: 'Poppins', sans-serif; font-weight: 700; font-style: normal; }
+.poppins-extrabold { font-family: 'Poppins', sans-serif; font-weight: 800; font-style: normal; }
+.poppins-black { font-family: 'Poppins', sans-serif; font-weight: 900; font-style: normal; }
+.poppins-thin-italic { font-family: 'Poppins', sans-serif; font-weight: 100; font-style: italic; }
+.poppins-extralight-italic { font-family: 'Poppins', sans-serif; font-weight: 200; font-style: italic; }
+.poppins-light-italic { font-family: 'Poppins', sans-serif; font-weight: 300; font-style: italic; }
+.poppins-regular-italic { font-family: 'Poppins', sans-serif; font-weight: 400; font-style: italic; }
+.poppins-medium-italic { font-family: 'Poppins', sans-serif; font-weight: 500; font-style: italic; }
+.poppins-semibold-italic { font-family: 'Poppins', sans-serif; font-weight: 600; font-style: italic; }
+.poppins-bold-italic { font-family: 'Poppins', sans-serif; font-weight: 700; font-style: italic; }
+.poppins-extrabold-italic { font-family: 'Poppins', sans-serif; font-weight: 800; font-style: italic; }
+.poppins-black-italic { font-family: 'Poppins', sans-serif; font-weight: 900; font-style: italic; }
+
+.user-heading { font-family: 'Poppins', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+.user-subtitle { font-family: 'Poppins', sans-serif; font-weight: 300; color: #6b7280; }
+
+.user-item-name { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 18px; line-height: 1.3; }
+.user-item-desc { font-family: 'Poppins', sans-serif; font-weight: 300; color: #4b5563; font-size: 16px; line-height: 1.5; }
+.user-item-price { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 20px; }
+.user-meta { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px; }
+
+.user-pill { height: 2.25rem; padding: 0 1rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: .5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.user-pill--success { background: rgba(16, 185, 129, .15); color: #065f46; }
+.user-pill--danger { background: rgba(239, 68, 68, .15); color: #7f1d1d; }
+
+.user-btn { height: 2.25rem; padding: 0 1.25rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: .5rem; font-family: 'Poppins', sans-serif; font-weight: 800; border: 2px solid #f97316; color: #ea580c; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.06); transition: all .2s ease; }
+.user-btn:hover { background: #f97316; color: #fff; box-shadow: 0 4px 10px rgba(249, 115, 22, .25); transform: translateY(-1px); }
+.user-btn:active { transform: scale(.97); }
+
+.user-price-ribbon { backdrop-filter: blur(6px); background: rgba(0,0,0,.45); color: #fff; border-radius: .75rem; padding: .35rem .75rem; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.user-price-ribbon .label { font-family: 'Poppins', sans-serif; font-weight: 600; letter-spacing: .18em; font-size: 11px; opacity: .9; }
+.user-price-ribbon .value { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.25rem; line-height: 1; }
+
+

@@ -224,7 +224,7 @@ const RestaurantCard = ({ restaurant }) => {
                 !stockStatus.canOrder ? 'text-gray-500' : ''
             }`}>
                 <div className="flex items-start justify-between">
-                    <h3 className={`text-base font-semibold truncate flex-1 pr-2 ${
+                    <h3 className={`text-base user-item-name truncate flex-1 pr-2 ${
                         !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
                     }`}>{restaurant.name}</h3>
                     {/* Enhanced Stock indicator with wow styling */}
@@ -245,26 +245,26 @@ const RestaurantCard = ({ restaurant }) => {
                         </span>
                     </div>
                 </div>
-                <div className={`flex items-center mt-1 ${
+                <div className={`flex items-center mt-1 user-meta ${
                     !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-800'
                 }`}>
                     <Star className={`w-4 h-4 fill-current ${
                         !stockStatus.canOrder ? 'text-gray-400' : 'text-green-600'
                     }`} />
-                    <span className={`ml-1 font-bold text-sm ${
+                    <span className={`ml-1 font-bold ${
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{restaurant.rating}</span>
                     <span className="mx-2 text-gray-300">•</span>
-                    <span className={`font-medium text-xs ${
+                    <span className={`font-medium ${
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{restaurant.deliveryTime}</span>
                 </div>
-                <p className={`mt-1 text-xs truncate ${
+                <p className={`mt-1 text-xs user-item-desc truncate ${
                     !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-500'
                 }`}>{restaurant.cuisine}</p>
                 <div className="mt-auto pt-4">
                     <div className="flex items-center justify-between">
-                        <p className={`text-xl font-extrabold ${
+                        <p className={`text-xl user-item-price ${
                             !stockStatus.canOrder ? 'text-gray-400' : 'text-black'
                         }`}>₹{restaurant.price}</p>
                         <button 
