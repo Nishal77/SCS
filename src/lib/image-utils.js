@@ -104,7 +104,8 @@ export const formatProductForUser = (product) => {
         stockAvailable: product.stock_available || 0,
         stockConstant: product.stock_constant || 0,
         addedBy: product.profiles?.name || product.profiles?.email_name || 'Staff',
-        createdAt: product.created_at
+        createdAt: product.created_at,
+        isSpecial: product.is_todays_special === true
     };
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Shield, Edit, Save, X, ArrowLeft } from 'lucide-react';
+import { Mail, Phone, Shield, Edit, Save, X, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,13 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Header from './Header';
-import { generateAvatarFromEmail, generateInitials, getDisplayName, getDisplayEmail } from '../../lib/avatar-utils';
 
 const ProfilePage = () => {
   const [userSession, setUserSession] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,10 +36,8 @@ const ProfilePage = () => {
         });
       } catch (error) {
         console.error('Error parsing user session:', error);
-        setError('Failed to load user data');
       }
     } else {
-      // Redirect to login if no session
       navigate('/auth/login');
       return;
     }
@@ -59,8 +55,6 @@ const ProfilePage = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Here you would typically update the user profile in the database
-      // For now, we'll just update the local session
       const updatedSession = {
         ...userSession,
         ...formData
@@ -69,11 +63,8 @@ const ProfilePage = () => {
       localStorage.setItem('user_session', JSON.stringify(updatedSession));
       setUserSession(updatedSession);
       setIsEditing(false);
-      
-      // Show success message (you could add a toast notification here)
       console.log('Profile updated successfully');
     } catch (error) {
-      setError('Failed to update profile');
       console.error('Error updating profile:', error);
     } finally {
       setLoading(false);
@@ -81,7 +72,6 @@ const ProfilePage = () => {
   };
 
   const handleCancel = () => {
-    // Reset form data to original values
     setFormData({
       name: userSession?.name || '',
       email: userSession?.email || '',
@@ -102,24 +92,11 @@ const ProfilePage = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Profile</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
-        </div>
-      </div>
-    );
-  }
-
   // Get display information
-  const displayName = getDisplayName(userSession);
-  const displayEmail = getDisplayEmail(userSession);
-  const avatarUrl = '/profile1.JPG';
-  const initials = generateInitials(displayEmail, displayName);
+  const displayName = userSession?.name || userSession?.email_name || 'User';
+  const displayEmail = userSession?.email || 'No email';
+  const avatarUrl = '/mainprofile.JPG';
+  const initials = displayName.charAt(0).toUpperCase();
 
   return (
     <div className="bg-stone-50 min-h-screen font-sans flex flex-col">
@@ -148,7 +125,7 @@ const ProfilePage = () => {
               <Card className="sticky top-8">
                 <CardHeader className="text-center pb-4">
                   <div className="mx-auto mb-4">
-                    <Avatar className="w-28 h-28 border-4 border-amber-200 shadow-2xl hover:shadow-amber-200/50 transition-all duration-300 transform hover:scale-105">
+                    <Avatar className="w-28 h-28 border-4 border-amber-200 shadow-2xl">
                       <AvatarImage 
                         src={avatarUrl} 
                         alt={displayName}

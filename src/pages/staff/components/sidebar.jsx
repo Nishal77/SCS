@@ -171,9 +171,18 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
                     />
                     {isMenuOpen && (
                         <div className="pl-4 border-l-2 border-gray-200 ml-4">
-                            <NavItem label="Add Item" isSubItem />
-                            <NavItem label="Edit Items" isSubItem />
-                            <NavItem label="Categories" isSubItem />
+                            <NavItem 
+                                label="Inventory" 
+                                isSubItem 
+                                isActive={currentPage === 'inventory'}
+                                onClick={() => handlePageChange('inventory')}
+                            />
+                            <NavItem 
+                                label="Categories" 
+                                isSubItem 
+                                isActive={currentPage === 'categories'}
+                                onClick={() => handlePageChange('categories')}
+                            />
                         </div>
                     )}
                     <NavItem 

@@ -3,6 +3,7 @@ import Sidebar from './components/sidebar';
 import Dashboard from './components/dashboard';
 import Project from './components/project';
 import Inventory from './product/inventory';
+import CategoryManagement from './product/category-management';
 import UserDropdown from './components/user-dropdown';
 import { Menu } from 'lucide-react';
 import ProductItems from './product/items';
@@ -40,6 +41,8 @@ export default function StaffDashboardMain() {
                 return <Project />;
             case 'inventory':
                 return <Inventory />;
+            case 'categories':
+                return <CategoryManagement />;
             case 'product':
                 return <ProductItems />;
             default:

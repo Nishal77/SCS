@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import supabase from '../../lib/supabase';
+import { getCategoryCarouselImage, getAllCategoriesFromDatabase } from '../../lib/category-utils';
 
 // --- Real Categories from Supabase ---
 const useCategoriesData = () => {
@@ -12,28 +13,48 @@ const useCategoriesData = () => {
         const fetchCategories = async () => {
             try {
                 setLoading(true);
-                const { data, error } = await supabase
-                    .from('inventory')
-                    .select('category')
-                    .order('category');
                 
-                if (error) throw error;
+                // First try to get categories from the categories table
+                let categoryObjects = [];
+                try {
+                    const dbCategories = await getAllCategoriesFromDatabase();
+                    if (dbCategories && dbCategories.length > 0) {
+                        categoryObjects = dbCategories.map(category => ({
+                            name: category.name,
+                            image: category.custom_image_url || category.image_url || getCategoryCarouselImage(category.name),
+                            description: category.description,
+                            color_scheme: category.color_scheme
+                        }));
+                    }
+                } catch (dbError) {
+                    console.log('Categories table not available, falling back to inventory table');
+                }
+
+                // Fallback to inventory table if categories table is empty or unavailable
+                if (categoryObjects.length === 0) {
+                    const { data, error } = await supabase
+                        .from('inventory')
+                        .select('category')
+                        .order('category');
+                    
+                    if (error) throw error;
+                    
+                    // Get unique categories
+                    const uniqueCategories = [...new Set(data.map(item => item.category))];
+                    // Create category objects with Unsplash images
+                    categoryObjects = uniqueCategories.map(category => ({
+                        name: category,
+                        image: getCategoryCarouselImage(category)
+                    }));
+                }
                 
-                // Get unique categories
-                const uniqueCategories = [...new Set(data.map(item => item.category))];
-                // Create category objects with simple placeholder images
-                const categoryObjects = uniqueCategories.map(category => ({
-                    name: category,
-                    image: `https://placehold.co/200x200/F3F4F6/9CA3AF?text=${category.charAt(0).toUpperCase()}`
-                }));
-                
-                // If no categories found, add some default ones
+                // If still no categories found, add some default ones with Unsplash images
                 if (categoryObjects.length === 0) {
                     categoryObjects.push(
-                        { name: 'Breakfast', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=B' },
-                        { name: 'Lunch', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=L' },
-                        { name: 'Dinner', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=D' },
-                        { name: 'Snacks', image: 'https://placehold.co/200x200/F3F4F6/9CA3AF?text=S' }
+                        { name: 'Breakfast', image: getCategoryCarouselImage('Breakfast') },
+                        { name: 'Lunch', image: getCategoryCarouselImage('Lunch') },
+                        { name: 'Dinner', image: getCategoryCarouselImage('Dinner') },
+                        { name: 'Snacks', image: getCategoryCarouselImage('Snacks') }
                     );
                 }
                 setFoodCategories(categoryObjects);

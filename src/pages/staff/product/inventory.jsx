@@ -15,6 +15,7 @@ import { formatImageUrl, formatProductForUser } from '@/lib/image-utils';
 import supabase from '@/lib/supabase';
 import ImageUpload from '@/components/ImageUpload';
 import IndianClock from '../components/IndianClock';
+import { getCategoryBadgeImage, getCategoryFilterImage } from '@/lib/category-utils';
 
 
 // --- Reusable Components ---
@@ -128,19 +129,26 @@ const StatusBadge = ({ stockAvailable, stockConstant }) => {
 const CategoryBadge = ({ category }) => {
     const categoryStyles = {
         'Breakfast': 'bg-blue-100 text-blue-700 border-blue-200',
-        'Lunch': 'bg-green-100 text-green-700 border-green-200',
-        'Dinner': 'bg-purple-100 text-purple-700 border-purple-200',
+        'Indian main': 'bg-green-100 text-green-700 border-green-200',
+        'Chinese': 'bg-red-100 text-red-700 border-red-200',
         'Snacks': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-        'Combo': 'bg-orange-100 text-orange-700 border-orange-200',
-        'Chats Items': 'bg-red-100 text-red-700 border-red-200',
-        'Juice': 'bg-cyan-100 text-cyan-700 border-cyan-200',
-        'Milkshake': 'bg-pink-100 text-pink-700 border-pink-200',
-        'Icecream': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+        'Combo meals': 'bg-orange-100 text-orange-700 border-orange-200',
+        'Beverages': 'bg-purple-100 text-purple-700 border-purple-200',
+        'Fresh juices': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+        'Milkshakes': 'bg-pink-100 text-pink-700 border-pink-200',
     };
+
     return (
-        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${categoryStyles[category] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-            {category}
-        </span>
+        <div className="flex items-center gap-2">
+            <img 
+                src={getCategoryBadgeImage(category)} 
+                alt={category}
+                className="w-6 h-6 rounded-full object-cover border border-gray-200"
+            />
+            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${categoryStyles[category] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                {category}
+            </span>
+        </div>
     );
 };
 
@@ -184,7 +192,7 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
         { id: 'special', label: "Today's Special", icon: '⭐' }
     ];
 
-    const categories = ['All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Combo', 'Chats Items', 'Juice', 'Milkshake', 'Icecream'];
+    const categories = ['All Categories', 'Breakfast', 'Indian main', 'Chinese', 'Snacks', 'Combo meals', 'Beverages', 'Fresh juices', 'Milkshakes'];
 
     const handleFilterClick = (filterId) => {
         onFilter(filterId);
@@ -224,11 +232,23 @@ const FilterOptions = ({ onFilter, activeFilter, onCategorySelect, selectedCateg
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
                         >
                             {categories.map(category => (
-                                <option key={category} value={category}>
+                                <option key={category} value={category} className="flex items-center gap-2">
                                     {category}
                                 </option>
                             ))}
                         </select>
+                        
+                        {/* Show selected category image */}
+                        {selectedCategory && selectedCategory !== 'All Categories' && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                <img 
+                                    src={getCategoryFilterImage(selectedCategory)} 
+                                    alt={selectedCategory}
+                                    className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                                />
+                                <span className="text-sm font-medium text-gray-700">{selectedCategory}</span>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -247,6 +267,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
         stockConstant: product?.stock_constant || '',
         isTodaysSpecial: product?.is_todays_special || false,
         foodType: product?.food_type || 'veg',
+        additionalFoodType: product?.additional_food_type || '',
         image: product?.image_url || ''
     });
 
@@ -357,54 +378,75 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode }) => {
                                     >
                                         <option value="">Select Category</option>
                                         <option value="Breakfast">Breakfast</option>
-                                        <option value="Lunch">Lunch</option>
-                                        <option value="Dinner">Dinner</option>
+                                        <option value="Indian main">Indian main</option>
+                                        <option value="Chinese">Chinese</option>
                                         <option value="Snacks">Snacks</option>
-                                        <option value="Combo">Combo</option>
-                                        <option value="Chats Items">Chats Items</option>
-                                        <option value="Juice">Juice</option>
-                                        <option value="Milkshake">Milkshake</option>
-                                        <option value="Icecream">Icecream</option>
+                                        <option value="Combo meals">Combo meals</option>
+                                        <option value="Beverages">Beverages</option>
+                                        <option value="Fresh juices">Fresh juices</option>
+                                        <option value="Milkshakes">Milkshakes</option>
                                     </select>
                                 </div>
                                 
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-semibold text-gray-700">Food Type</label>
-                                    <div className="flex gap-4">
-                                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:border-green-300 transition-colors duration-200 bg-gray-50 hover:bg-white">
+                                <div className="space-y-5">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-4">Food Type</label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        {/* Vegetarian */}
+                                        <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all duration-300 bg-white hover:shadow-lg group">
                                             <input
                                                 type="radio"
                                                 name="foodType"
                                                 value="veg"
                                                 checked={formData.foodType === 'veg'}
                                                 onChange={handleChange}
-                                                className="w-4 h-4 text-green-500 border-gray-300 focus:ring-green-500"
+                                                className="w-5 h-5 text-green-500 border-gray-300 focus:ring-green-500 focus:ring-2"
                                             />
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                                                 </div>
-                                                <span className="text-sm font-medium text-gray-700">Vegetarian</span>
+                                                <span className="text-sm font-semibold text-gray-700 group-hover:text-green-700">Vegetarian</span>
                                             </div>
                                         </label>
-                                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:border-red-300 transition-colors duration-200 bg-gray-50 hover:bg-white">
+
+                                        {/* Non-Vegetarian */}
+                                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:border-red-300 transition-all duration-200 bg-gray-50 hover:bg-white hover:shadow-md group">
                                             <input
                                                 type="radio"
                                                 name="foodType"
                                                 value="non-veg"
                                                 checked={formData.foodType === 'non-veg'}
                                                 onChange={handleChange}
-                                                className="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-500"
+                                                className="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-500 focus:ring-2"
                                             />
                                             <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                                <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                                                     <div className="w-2 h-2 bg-white rounded-full"></div>
                                                 </div>
-                                                <span className="text-sm font-medium text-gray-700">Non-Vegetarian</span>
+                                                <span className="text-sm font-medium text-gray-700 group-hover:text-red-700">Non-Vegetarian</span>
                                             </div>
                                         </label>
                                     </div>
+                                    
+                                    {/* Additional Food Type Options */}
+                                    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Additional Food Type</label>
+                                        <select
+                                            name="additionalFoodType"
+                                            value={formData.additionalFoodType || ''}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-blue-50"
+                                        >
+                                            <option value="">Select Additional Food Type (Optional)</option>
+                                            <option value="beverages">Beverages</option>
+                                            <option value="desserts">Desserts</option>
+                                            <option value="chats">Chats</option>
+                                        </select>
+                                        <p className="text-xs text-blue-600 mt-2 font-medium">Choose an additional food type if applicable</p>
+                                    </div>
                                 </div>
+                                
+                                <p className="text-xs text-gray-500 mt-3 text-center">Select the appropriate food type for this product</p>
                             </div>
                         </div>
 

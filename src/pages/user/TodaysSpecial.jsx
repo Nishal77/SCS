@@ -167,11 +167,11 @@ const FoodItemCard = ({ item }) => {
                     </div>
                 )}
             </div>
-            <div className={`p-4 flex flex-col flex-grow ${
+            <div className={`p-3 flex flex-col flex-grow ${
                 !stockStatus.canOrder ? 'text-gray-500' : ''
             }`}>
                 <div className="flex items-start justify-between">
-                    <h3 className={`text-lg font-bold truncate flex-1 pr-2 ${
+                    <h3 className={`text-sm font-semibold flex-1 pr-2 break-words leading-snug ${
                         !stockStatus.canOrder ? 'text-gray-500' : 'text-gray-900'
                     }`}>{item.name}</h3>
                     {/* Enhanced Stock indicator with perfect styling */}
@@ -206,12 +206,15 @@ const FoodItemCard = ({ item }) => {
                         !stockStatus.canOrder ? 'text-gray-400' : ''
                     }`}>{item.deliveryTime}</span>
                 </div>
-                <p className={`mt-1.5 text-sm truncate ${
-                    !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-500'
-                }`}>{item.cuisine}</p>
+                {/* Show full description for Today's Special; hide category */}
+                {item.description && (
+                    <p className={`mt-1 text-xs whitespace-pre-line break-words leading-relaxed ${
+                        !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-600'
+                    }`}>{item.description}</p>
+                )}
                 <div className="mt-auto pt-4">
                     <div className="flex items-center justify-between">
-                        <p className={`text-xl font-extrabold ${
+                        <p className={`text-lg font-extrabold ${
                             !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-900'
                         }`}>{formatPriceWithCurrency(item.price)}</p>
                         <button 
@@ -315,13 +318,14 @@ const TodaysSpecial = () => {
     return (
         <div className="font-sans">
             <div className="container mx-auto">
-                {/* Enhanced Section Header */}
-                <div className="text-center mb-10">
-                    <h2 className="text-4xl font-black text-gray-900 mb-3 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                        Hot Picks of the Day
-                    </h2>
-                    <p className="text-xl text-gray-600 font-medium">Today's most popular and trending items</p>
-                    <div className="w-24 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto mt-4 rounded-full"></div>
+                {/* Enhanced Header Section */}
+                <div className="text-left mb-8">
+                  <h2 className="text-xl font-bold text-black mb-1">
+                    Hot Picks of the Day
+                  </h2>
+                  <p className="text-sm text-gray-600 font-medium">
+                    Today's most popular and trending items
+                  </p>
                 </div>
                 
                 {/* Enhanced Grid Layout - 2 items per row on small/medium screens */}
@@ -329,13 +333,6 @@ const TodaysSpecial = () => {
                     {foodItems.map((item) => (
                         <FoodItemCard key={item.id} item={item} />
                     ))}
-                </div>
-                
-                {/* Enhanced Item Count */}
-                <div className="text-center mt-12">
-                    <p className="text-gray-500 font-medium">
-                        Showing {foodItems.length} special item{foodItems.length !== 1 ? 's' : ''} today
-                    </p>
                 </div>
             </div>
         </div>

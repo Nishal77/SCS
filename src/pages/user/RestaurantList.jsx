@@ -5,6 +5,7 @@ import { handleAddToCart } from '../../lib/auth-utils';
 import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
 import FoodSymbol from '../../components/FoodSymbol';
+import { getCategoryFilterImage } from '../../lib/category-utils';
 
 // --- Real Data from Supabase with Real-time Updates ---
 const useInventoryData = () => {
@@ -26,11 +27,12 @@ const useInventoryData = () => {
                             email_name
                         )
                     `)
+                    .neq('is_todays_special', true)
                     .order('created_at', { ascending: false });
                 
                 if (error) throw error;
                 
-                let formattedProducts = data.map(formatProductForUser);
+                let formattedProducts = data.map(formatProductForUser).filter(p => !p.isSpecial);
                 
                 // If no products found, show empty state
                 if (formattedProducts.length === 0) {
@@ -63,15 +65,27 @@ const useInventoryData = () => {
                     
                     // Handle different types of changes
                     if (payload.eventType === 'UPDATE') {
-                        // Update existing product
-                        setProducts(prev => prev.map(item => 
-                            item.id === payload.new.id 
-                                ? formatProductForUser(payload.new)
-                                : item
-                        ));
+                        // If item became today's special, remove it from list
+                        if (payload.new.is_todays_special === true) {
+                            setProducts(prev => prev.filter(item => item.id !== payload.new.id));
+                        } else {
+                            // Update or add if not present
+                            setProducts(prev => {
+                                const exists = prev.some(item => item.id === payload.new.id);
+                                const formatted = formatProductForUser(payload.new);
+                                return exists
+                                    ? prev.map(item => (item.id === payload.new.id ? formatted : item))
+                                    : [formatted, ...prev];
+                            });
+                        }
                     } else if (payload.eventType === 'INSERT') {
-                        // Add new product
-                        setProducts(prev => [formatProductForUser(payload.new), ...prev]);
+                        // Only add if not marked as today's special
+                        if (payload.new.is_todays_special !== true) {
+                            const formatted = formatProductForUser(payload.new);
+                            if (!formatted.isSpecial) {
+                                setProducts(prev => [formatted, ...prev]);
+                            }
+                        }
                     } else if (payload.eventType === 'DELETE') {
                         // Remove deleted product
                         setProducts(prev => prev.filter(item => item.id !== payload.old.id));
@@ -103,20 +117,30 @@ const FilterBar = ({ activeFilter, setActiveFilter }) => {
 
     return (
         <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide">
-            {filters.map(filter => (
-                <button 
-                    key={filter.id}
-                    onClick={() => setActiveFilter(filter.id)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2 border ${
-                        activeFilter === filter.id
-                            ? 'bg-gray-900 text-white border-gray-900 shadow-md'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm hover:shadow-md'
-                    }`}
-                >
-                    <span className="text-sm">{filter.icon}</span>
-                    <span>{filter.label}</span>
-                </button>
-            ))}
+            {filters.map(filter => {
+                const categoryImage = getCategoryFilterImage(filter.id);
+                return (
+                    <button 
+                        key={filter.id}
+                        onClick={() => setActiveFilter(filter.id)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2 border ${
+                            activeFilter === filter.id
+                                ? 'bg-gray-900 text-white border-gray-900 shadow-md'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm hover:shadow-md'
+                        }`}
+                    >
+                        {categoryImage && (
+                            <img 
+                                src={categoryImage} 
+                                alt={filter.label}
+                                className="w-4 h-4 rounded-full object-cover border border-gray-200"
+                            />
+                        )}
+                        <span className="text-sm">{filter.icon}</span>
+                        <span>{filter.label}</span>
+                    </button>
+                );
+            })}
         </div>
     );
 };
