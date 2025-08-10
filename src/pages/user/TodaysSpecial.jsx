@@ -131,7 +131,7 @@ const FoodItemCard = ({ item }) => {
                 ? 'opacity-60 grayscale filter saturate-50 bg-gray-50 border-gray-200' 
                 : 'border-gray-100'
         }`}>
-            <div className="relative h-40 overflow-hidden">
+            <div className="relative h-32 overflow-hidden">
                 <img 
                     src={item.image} 
                     alt={item.name} 
@@ -212,7 +212,7 @@ const FoodItemCard = ({ item }) => {
                         !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-600'
                     }`}>{item.description}</p>
                 )}
-                <div className="mt-auto pt-4">
+                <div className="mt-3 pt-2">
                     <div className="flex items-center justify-between">
                         <p className={`text-lg font-extrabold ${
                             !stockStatus.canOrder ? 'text-gray-400' : 'text-gray-900'
@@ -220,7 +220,7 @@ const FoodItemCard = ({ item }) => {
                         <button 
                             onClick={handleAddClick}
                             disabled={!stockStatus.canOrder || addingToCart}
-                            className={`flex items-center gap-2 px-5 py-2.5 border-2 font-semibold rounded-xl transition-all duration-300 transform ${
+                            className={`flex items-center gap-2 px-4 py-2 border font-semibold rounded-lg transition-all duration-300 transform ${
                                 stockStatus.canOrder && !addingToCart
                                     ? 'border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white shadow-sm' 
                                     : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100 shadow-sm'
