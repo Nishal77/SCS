@@ -64,6 +64,11 @@ export const CartProvider = ({ children }) => {
     fetchCartData();
   };
 
+  const clearCartState = () => {
+    setCartItems([]);
+    setCartCount(0);
+  };
+
   useEffect(() => {
     fetchCartData();
   }, []);
@@ -100,7 +105,8 @@ export const CartProvider = ({ children }) => {
     cartCount,
     loading,
     error,
-    refreshCart
+    refreshCart,
+    clearCartState
   };
 
   return (

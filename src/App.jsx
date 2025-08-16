@@ -6,6 +6,7 @@ import StaffDashboard from './routes/StaffDashboard'
 import Contact from './pages/user/contact.jsx'
 import Cart from './pages/user/cart.jsx'
 import Order from './pages/user/order.jsx'
+import Orders from './pages/user/orders.jsx'
 import Profile from './pages/user/profile.jsx'
 import Login from './pages/auth/Login.jsx'
 import { CartProvider } from './lib/cart-context'
@@ -77,6 +78,11 @@ function App() {
           <Route path="/user/order" element={
             <ProtectedRoute>
               <Order />
+            </ProtectedRoute>
+          } />
+          <Route path="/user/orders" element={
+            <ProtectedRoute>
+              <Orders />
             </ProtectedRoute>
           } />
           <Route path="/user/profile" element={

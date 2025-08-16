@@ -61,13 +61,28 @@ export const checkAuthStatus = () => {
     if (userSession) {
         try {
             const sessionData = JSON.parse(userSession);
-            return sessionData && sessionData.id ? true : false;
+            return sessionData && sessionData.id ? sessionData : false;
         } catch (error) {
             console.error('Error parsing user session:', error);
             return false;
         }
     }
     return false;
+};
+
+// Get current user data (for custom auth system)
+export const getCurrentUserData = () => {
+    const userSession = localStorage.getItem('user_session');
+    if (userSession) {
+        try {
+            const sessionData = JSON.parse(userSession);
+            return sessionData && sessionData.id ? sessionData : null;
+        } catch (error) {
+            console.error('Error parsing user session:', error);
+            return null;
+        }
+    }
+    return null;
 };
 
 // Redirect to login page

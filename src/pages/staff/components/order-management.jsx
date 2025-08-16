@@ -3,7 +3,9 @@
 // To run this, you would need React and the lucide-react library.
 // npm install react react-dom lucide-react
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import supabase from '@/lib/supabase';
+import { safeParseDate, formatTime, calculateFutureTime } from '@/lib/utils';
 // Icons for the UI
 import { 
     CreditCard, Cash, CheckCircle, XCircle, Package, ShoppingBag, 
@@ -19,7 +21,7 @@ const Header = () => (
     <header className="flex justify-between items-center mb-6">
         <div>
             <h1 className="text-3xl font-bold text-gray-800">Order Management</h1>
-            <p className="text-sm text-gray-500 mt-1">Real-time order tracking & transaction management</p>
+            <p className="text-sm text-gray-500 mt-1">Real-time order tracking & transaction managementtt</p>
         </div>
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-gray-500">
@@ -58,13 +60,14 @@ const OrderStatusBadge = ({ status }) => {
     const statusStyles = {
         'Pending': 'bg-yellow-100 text-yellow-700 border-yellow-200',
         'Accepted': 'bg-blue-100 text-blue-700 border-blue-200',
-        'Preparing': 'bg-orange-100 text-orange-700 border-orange-200',
+        'Cooking': 'bg-orange-100 text-orange-700 border-orange-200',
         'Ready': 'bg-green-100 text-green-700 border-green-200',
         'Delivered': 'bg-gray-100 text-gray-700 border-gray-200',
         'Rejected': 'bg-red-100 text-red-700 border-red-200',
+        'Cancelled': 'bg-red-100 text-red-700 border-red-200',
     };
     return (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusStyles[status]}`}>
+        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusStyles[status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
             {status}
         </span>
     );
@@ -88,7 +91,7 @@ const DeliveryTypeBadge = ({ type }) => {
 const OTPDisplay = ({ otp }) => (
     <div className="flex items-center gap-1">
         <span className="text-lg font-mono font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">
-            {otp}
+            #{otp}
         </span>
         <span className="text-xs text-gray-500">OTP</span>
     </div>
@@ -98,7 +101,7 @@ const OTPDisplay = ({ otp }) => (
 const TokenDisplay = ({ token }) => (
     <div className="flex items-center gap-1">
         <span className="text-lg font-mono font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded">
-            #{token}
+            #tok-{token}
         </span>
         <span className="text-xs text-gray-500">Token</span>
     </div>
@@ -150,6 +153,42 @@ const ActionButtons = ({ orderId, onAccept, onReject, status }) => {
                 </button>
             </div>
         );
+    } else if (status === 'Accepted') {
+        return (
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => onAccept(orderId)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white text-xs font-semibold rounded-md hover:bg-orange-600 transition-colors"
+                >
+                    <Package size={14} />
+                    Start Cooking
+                </button>
+            </div>
+        );
+    } else if (status === 'Cooking') {
+        return (
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => onAccept(orderId)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors"
+                >
+                    <CheckCircle size={14} />
+                    Order Ready
+                </button>
+            </div>
+        );
+    } else if (status === 'Ready') {
+        return (
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => onAccept(orderId)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-xs font-semibold rounded-md hover:bg-blue-600 transition-colors"
+                >
+                    <Package size={14} />
+                    Deliver
+                </button>
+            </div>
+        );
     }
     return (
         <div className="flex items-center gap-2">
@@ -163,73 +202,99 @@ const ActionButtons = ({ orderId, onAccept, onReject, status }) => {
 
 // --- Transaction Section Component ---
 const TransactionSection = () => {
-    const transactions = [
-        {
-            id: 1,
-            orderNumber: '#ORD-001',
-            tokenNumber: 'T001',
-            otp: '1234',
-            customer: { name: 'Rahul Kumar', phone: '+91 98765 43210' },
-            items: [
-                { name: 'Masala Dosa', quantity: 2 },
-                { name: 'Filter Coffee', quantity: 1 }
-            ],
-            total: 145.00,
-            paymentStatus: 'Paid',
-            orderTime: '10:30 AM',
-            deliveryTime: '11:00 AM',
-            location: 'Block A, Room 101'
-        },
-        {
-            id: 2,
-            orderNumber: '#ORD-002',
-            tokenNumber: 'T002',
-            otp: '5678',
-            customer: { name: 'Priya Sharma', phone: '+91 87654 32109' },
-            items: [
-                { name: 'Samosa', quantity: 3 },
-                { name: 'Veg Puff', quantity: 2 },
-                { name: 'Tea', quantity: 1 }
-            ],
-            total: 95.00,
-            paymentStatus: 'Cash',
-            orderTime: '10:45 AM',
-            deliveryTime: '11:15 AM',
-            location: 'Block B, Room 205'
-        },
-        {
-            id: 3,
-            orderNumber: '#ORD-003',
-            tokenNumber: 'T003',
-            otp: '9012',
-            customer: { name: 'Amit Patel', phone: '+91 76543 21098' },
-            items: [
-                { name: 'Idli Vada', quantity: 1 },
-                { name: 'Sambar', quantity: 1 }
-            ],
-            total: 60.00,
-            paymentStatus: 'Pending',
-            orderTime: '11:00 AM',
-            deliveryTime: '11:30 AM',
-            location: 'Block C, Room 310'
-        },
-        {
-            id: 4,
-            orderNumber: '#ORD-004',
-            tokenNumber: 'T004',
-            otp: '3456',
-            customer: { name: 'Neha Singh', phone: '+91 65432 10987' },
-            items: [
-                { name: 'Paneer Roll', quantity: 2 },
-                { name: 'Cold Coffee', quantity: 1 }
-            ],
-            total: 130.00,
-            paymentStatus: 'Paid',
-            orderTime: '11:15 AM',
-            deliveryTime: '11:45 AM',
-            location: 'Block A, Room 105'
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchTransactions();
+        
+        // Set up real-time subscription for new transactions
+        const subscription = supabase
+            .channel('transactions_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'transactions'
+                },
+                (payload) => {
+                    console.log('Transaction change detected:', payload);
+                    if (payload.eventType === 'INSERT') {
+                        // New transaction added
+                        fetchTransactions();
+                    } else if (payload.eventType === 'UPDATE') {
+                        // Transaction updated
+                        fetchTransactions();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    const fetchTransactions = async () => {
+        try {
+            setLoading(true);
+            
+            // Get all transactions with payment status 'success'
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('payment_status', 'success')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Transform data to match the required format
+            const formattedTransactions = data.map(transaction => {
+                // Get order items from localStorage or generate from transaction data
+                let orderItems = [];
+                try {
+                    const storedItems = localStorage.getItem(`orderItems_${transaction.id}`);
+                    if (storedItems) {
+                        orderItems = JSON.parse(storedItems);
+                    }
+                } catch (e) {
+                    console.log('No stored order items found');
+                }
+
+                // Format time using utility functions for robust date handling
+                const createdAt = safeParseDate(transaction.created_at);
+                const orderTime = formatTime(createdAt);
+                const deliveryTime = calculateFutureTime(createdAt, 20);
+
+                return {
+                    id: transaction.id,
+                    orderNumber: transaction.order_number,
+                    tokenNumber: transaction.token_number,
+                    otp: transaction.otp,
+                    customer: { 
+                        name: transaction.user_name || 'Guest', 
+                        phone: transaction.user_phone || 'N/A' 
+                    },
+                    items: orderItems.length > 0 ? orderItems.map(item => ({
+                        name: item.item_name || item.name,
+                        quantity: item.quantity
+                    })) : [{ name: 'Order Items', quantity: 1 }],
+                    total: parseFloat(transaction.total_amount),
+                    paymentStatus: transaction.payment_method === 'online' ? 'Paid' : 'Cash',
+                    orderTime: orderTime,
+                    deliveryTime: deliveryTime,
+                    location: 'MITE Canteen'
+                };
+            });
+
+            setTransactions(formattedTransactions);
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm">
@@ -245,6 +310,22 @@ const TransactionSection = () => {
                 </div>
             </div>
 
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                        <p className="text-gray-500 text-sm">Loading transactions...</p>
+                    </div>
+                </div>
+            ) : transactions.length === 0 ? (
+                <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShoppingBag className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm">No transactions found</p>
+                    <p className="text-gray-400 text-xs mt-1">Transactions will appear here when users make payments</p>
+                </div>
+            ) : (
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
@@ -300,6 +381,7 @@ const TransactionSection = () => {
                     </tbody>
                 </table>
             </div>
+            )}
         </div>
     );
 };
@@ -307,6 +389,93 @@ const TransactionSection = () => {
 // --- Order Status Section Component ---
 const OrderStatusSection = () => {
     const [selectedOrders, setSelectedOrders] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchOrders();
+        
+        // Set up real-time subscription for order updates
+        const subscription = supabase
+            .channel('orders_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'transactions'
+                },
+                (payload) => {
+                    console.log('Order change detected:', payload);
+                    fetchOrders();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            
+            // Get all transactions with payment status 'success'
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('payment_status', 'success')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Transform data to match the required format
+            const formattedOrders = data.map(transaction => {
+                // Get order items from localStorage
+                let orderItems = [];
+                try {
+                    const storedItems = localStorage.getItem(`orderItems_${transaction.id}`);
+                    if (storedItems) {
+                        orderItems = JSON.parse(storedItems);
+                    }
+                } catch (e) {
+                    console.log('No stored order items found');
+                }
+
+                // Format time using utility functions for robust date handling
+                const createdAt = safeParseDate(transaction.created_at);
+                const orderTime = formatTime(createdAt);
+                const deliveryTime = calculateFutureTime(createdAt, 20);
+
+                return {
+                    id: transaction.id,
+                    orderNumber: transaction.order_number,
+                    customer: { 
+                        name: transaction.user_name || 'Guest', 
+                        phone: transaction.user_phone || 'N/A' 
+                    },
+                    items: orderItems.length > 0 ? orderItems.map(item => ({
+                        name: item.item_name || item.name,
+                        quantity: item.quantity
+                    })) : [{ name: 'Order Items', quantity: 1 }],
+                    total: parseFloat(transaction.total_amount),
+                    orderStatus: transaction.order_status || 'Pending',
+                    deliveryType: transaction.dining_option === 'dine-in' ? 'Dine-in' : 
+                                 transaction.dining_option === 'takeaway' ? 'Takeaway' : 'Parcel',
+                    orderTime: orderTime,
+                    deliveryTime: deliveryTime,
+                    location: 'MITE Canteen'
+                };
+            });
+
+            setOrders(formattedOrders);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const toggleOrder = (id) => {
         setSelectedOrders(prev => 
@@ -314,93 +483,57 @@ const OrderStatusSection = () => {
         );
     };
 
-    const handleAcceptOrder = (orderId) => {
-        console.log('Order accepted:', orderId);
-    };
+    const handleAcceptOrder = async (orderId) => {
+        try {
+            // Get current order status
+            const { data: currentOrder } = await supabase
+                .from('transactions')
+                .select('order_status')
+                .eq('id', orderId)
+                .single();
 
-    const handleRejectOrder = (orderId) => {
-        console.log('Order rejected:', orderId);
-    };
+            let newStatus = 'Accepted';
+            
+            // Determine next status based on current status
+            if (currentOrder?.order_status === 'Accepted') {
+                newStatus = 'Cooking';
+            } else if (currentOrder?.order_status === 'Cooking') {
+                newStatus = 'Ready';
+            } else if (currentOrder?.order_status === 'Ready') {
+                newStatus = 'Delivered';
+            }
 
-    const orders = [
-        {
-            id: 1,
-            orderNumber: '#ORD-001',
-            customer: { name: 'Rahul Kumar', phone: '+91 98765 43210' },
-            items: [
-                { name: 'Masala Dosa', quantity: 2 },
-                { name: 'Filter Coffee', quantity: 1 }
-            ],
-            total: 145.00,
-            orderStatus: 'Pending',
-            deliveryType: 'Takeaway',
-            orderTime: '10:30 AM',
-            deliveryTime: '11:00 AM',
-            location: 'Block A, Room 101'
-        },
-        {
-            id: 2,
-            orderNumber: '#ORD-002',
-            customer: { name: 'Priya Sharma', phone: '+91 87654 32109' },
-            items: [
-                { name: 'Samosa', quantity: 3 },
-                { name: 'Veg Puff', quantity: 2 },
-                { name: 'Tea', quantity: 1 }
-            ],
-            total: 95.00,
-            orderStatus: 'Accepted',
-            deliveryType: 'Parcel',
-            orderTime: '10:45 AM',
-            deliveryTime: '11:15 AM',
-            location: 'Block B, Room 205'
-        },
-        {
-            id: 3,
-            orderNumber: '#ORD-003',
-            customer: { name: 'Amit Patel', phone: '+91 76543 21098' },
-            items: [
-                { name: 'Idli Vada', quantity: 1 },
-                { name: 'Sambar', quantity: 1 }
-            ],
-            total: 60.00,
-            orderStatus: 'Preparing',
-            deliveryType: 'Dine-in',
-            orderTime: '11:00 AM',
-            deliveryTime: '11:30 AM',
-            location: 'Block C, Room 310'
-        },
-        {
-            id: 4,
-            orderNumber: '#ORD-004',
-            customer: { name: 'Neha Singh', phone: '+91 65432 10987' },
-            items: [
-                { name: 'Paneer Roll', quantity: 2 },
-                { name: 'Cold Coffee', quantity: 1 }
-            ],
-            total: 130.00,
-            orderStatus: 'Ready',
-            deliveryType: 'Takeaway',
-            orderTime: '11:15 AM',
-            deliveryTime: '11:45 AM',
-            location: 'Block A, Room 105'
-        },
-        {
-            id: 5,
-            orderNumber: '#ORD-005',
-            customer: { name: 'Vikram Mehta', phone: '+91 54321 09876' },
-            items: [
-                { name: 'Masala Dosa', quantity: 1 },
-                { name: 'Coconut Chutney', quantity: 1 },
-                { name: 'Filter Coffee', quantity: 1 }
-            ],
-            total: 85.00,
-            orderStatus: 'Pending',
-            deliveryType: 'Parcel',
-            orderTime: '11:30 AM',
-            deliveryTime: '12:00 PM',
-            location: 'Block D, Room 401'
+            // Update order status
+            const { error } = await supabase
+                .from('transactions')
+                .update({ order_status: newStatus })
+                .eq('id', orderId);
+
+            if (error) throw error;
+            
+            console.log(`Order ${orderId} status updated to: ${newStatus}`);
+            fetchOrders(); // Refresh orders
+        } catch (error) {
+            console.error('Error updating order status:', error);
         }
-    ];
+    };
+
+    const handleRejectOrder = async (orderId) => {
+        try {
+            // Update order status to 'Rejected'
+            const { error } = await supabase
+                .from('transactions')
+                .update({ order_status: 'Rejected' })
+                .eq('id', orderId);
+
+            if (error) throw error;
+            
+        console.log('Order rejected:', orderId);
+            fetchOrders(); // Refresh orders
+        } catch (error) {
+            console.error('Error rejecting order:', error);
+        }
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm">
@@ -416,6 +549,22 @@ const OrderStatusSection = () => {
                 </div>
             </div>
 
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                        <p className="text-gray-500 text-sm">Loading orders...</p>
+                    </div>
+                </div>
+            ) : orders.length === 0 ? (
+                <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShoppingBag className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm">No orders found</p>
+                    <p className="text-gray-400 text-xs mt-1">Orders will appear here when users make payments</p>
+                </div>
+            ) : (
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
@@ -471,9 +620,10 @@ const OrderStatusSection = () => {
                     </tbody>
                 </table>
             </div>
+            )}
 
             {/* Table Footer */}
-            {selectedOrders.length > 0 && (
+            {orders.length > 0 && selectedOrders.length > 0 && (
                 <div className="mt-4 p-3 bg-gray-100 rounded-lg flex items-center justify-between shadow-inner">
                     <p className="font-semibold text-gray-700">{selectedOrders.length} Orders Selected</p>
                     <div className="flex items-center gap-4">

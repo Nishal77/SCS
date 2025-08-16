@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, CreditCard, Landmark, Wallet, AlertCircle, CheckCircle, Loader2, Copy } from 'lucide-react';
 import paymentService from '../services/PaymentService';
 
@@ -13,6 +14,7 @@ const PaymentModal = ({
   onPaymentSuccess, 
   onPaymentError 
 }) => {
+  const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState(selectedPaymentMethod || 'cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -65,9 +67,14 @@ const PaymentModal = ({
             setTransaction(updatedTransaction);
             setPaymentSuccess('Payment successful! Your order has been placed.');
             setProcessingPayment(false);
+            // Ensure cart is refreshed after successful payment
             if (onPaymentSuccess) {
               onPaymentSuccess(updatedTransaction);
             }
+            // Redirect to orders page after successful payment
+            setTimeout(() => {
+              navigate('/user/orders');
+            }, 2000);
           },
           onError: (error) => {
             setPaymentError(error);
@@ -86,6 +93,10 @@ const PaymentModal = ({
             if (onPaymentSuccess) {
               onPaymentSuccess(updatedTransaction);
             }
+            // Redirect to orders page after successful payment
+            setTimeout(() => {
+              navigate('/user/orders');
+            }, 2000);
           },
           onError: (error) => {
             setPaymentError(error);
@@ -328,10 +339,10 @@ const PaymentModal = ({
                 Close
               </button>
               <button
-                onClick={() => window.location.href = `/user/order?order=${transaction.order_number}`}
+                onClick={() => navigate('/user/orders')}
                 className="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition-colors font-semibold"
               >
-                View Order
+                View Orders
               </button>
             </div>
           )}

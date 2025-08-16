@@ -23,6 +23,15 @@ export const createTransaction = async (transactionData) => {
   try {
     const orderNumber = generateOrderNumber();
     
+    // Validate required fields
+    if (!transactionData.userId) {
+      throw new Error('User ID is required');
+    }
+    
+    if (!transactionData.userEmail) {
+      throw new Error('User email is required');
+    }
+    
     // Include all required fields from the comprehensive transactions table
     const transactionRecord = {
       user_id: transactionData.userId,
@@ -37,13 +46,17 @@ export const createTransaction = async (transactionData) => {
       payment_status: 'pending',
       payment_gateway: transactionData.paymentGateway || 'razorpay',
       order_number: orderNumber,
-      order_status: 'pending',
+      order_status: 'Pending',
       dining_option: transactionData.diningOption || 'takeaway',
       special_instructions: transactionData.specialInstructions || '',
       estimated_pickup_time: transactionData.estimatedPickupTime || null
     };
 
     console.log('Creating transaction with data:', transactionRecord);
+    console.log('User ID being sent:', transactionData.userId);
+    console.log('User ID type:', typeof transactionData.userId);
+    console.log('Order status being sent:', transactionRecord.order_status);
+    console.log('Order status type:', typeof transactionRecord.order_status);
     
     const { data, error } = await supabase
       .from('transactions')
@@ -101,7 +114,7 @@ export const updateTransactionOTP = async (transactionId, otp) => {
   }
 };
 
-// Generate next sequential token number
+// Generate next sequential token number in perfect format #tok-001
 export const generateNextTokenNumber = async () => {
   try {
     // Get the highest token number and increment
@@ -109,7 +122,6 @@ export const generateNextTokenNumber = async () => {
       .from('transactions')
       .select('token_number')
       .not('token_number', 'is', null)
-      .like('token_number', 'M%')
       .order('token_number', { ascending: false })
       .limit(1);
 
@@ -118,15 +130,24 @@ export const generateNextTokenNumber = async () => {
     let nextNumber = 1;
     if (data && data.length > 0) {
       const lastToken = data[0].token_number;
-      const lastNumber = parseInt(lastToken.substring(1));
+      // Extract number from token (could be M001, #tok-001, or just 001)
+      let lastNumber = 1;
+      if (lastToken.startsWith('M')) {
+        lastNumber = parseInt(lastToken.substring(1));
+      } else if (lastToken.startsWith('#tok-')) {
+        lastNumber = parseInt(lastToken.substring(5));
+      } else {
+        // Assume it's just a number
+        lastNumber = parseInt(lastToken) || 1;
+      }
       nextNumber = lastNumber + 1;
     }
 
-    return 'M' + nextNumber.toString().padStart(3, '0');
+    return nextNumber.toString().padStart(3, '0');
   } catch (error) {
     console.error('Error generating token number:', error);
     // Fallback to timestamp-based token
-    return 'M' + Date.now().toString().slice(-3);
+    return Date.now().toString().slice(-3).padStart(3, '0');
   }
 };
 

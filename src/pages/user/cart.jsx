@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Footer from '../../components/spectrumui/footer.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,7 +7,9 @@ import { CheckCircle, ChevronDown, Clock, CreditCard, Home, Landmark, Minus, Plu
 import { updateCartItemQuantity, removeFromCart, clearCart } from '../../lib/cart-utils';
 import { checkAuthStatus } from '../../lib/auth-utils';
 import { useCart } from '../../lib/cart-context';
+import { clearCartAfterPayment } from '../../lib/payment-utils';
 import PaymentModal from '../../components/PaymentModal';
+import { Receipt } from 'lucide-react';
 
 // --- Helper Function to Generate Time Slots ---
 const generateTimeSlots = () => {
@@ -63,42 +66,42 @@ const generateTimeSlots = () => {
 
 // --- Cart State Management ---
 const useCartData = () => {
-  const { cartItems, loading, error, refreshCart } = useCart();
+  const { cartItems, loading, error, refreshCart, clearCartState } = useCart();
 
-  return { cartItems, loading, error, refreshCart };
+  return { cartItems, loading, error, refreshCart, clearCartState };
 };
 
 // --- Reusable Components ---
 
 const OrderItem = ({ item, onQuantityChange, updating }) => (
-  <div className="flex items-center gap-3 py-3">
-    <img src={item.image} alt={item.name} className="w-14 h-14 rounded-md object-cover" />
+  <div className="flex items-center gap-4 py-4 px-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+    <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover shadow-sm" />
     <div className="flex-grow">
-      <p className="font-semibold text-sm text-gray-800">{item.name}</p>
-      <p className="text-xs text-gray-500">₹{item.price.toFixed(2)}</p>
+      <p className="font-semibold text-base text-gray-900 mb-1">{item.name}</p>
+      <p className="text-sm text-gray-600 font-medium">₹{item.price.toFixed(2)}</p>
       {item.stockAvailable !== undefined && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500 mt-1">
           Stock: {item.stockAvailable} available
         </p>
       )}
     </div>
-    <div className="flex items-center gap-2 border border-gray-200 rounded-full py-0.5 px-1">
+    <div className="flex items-center gap-3 border border-gray-200 rounded-full py-2 px-3 bg-white shadow-sm">
       <button 
         onClick={() => onQuantityChange(item.id, -1)} 
         disabled={updating}
-        className={`p-1 rounded-full hover:bg-gray-100 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        <Minus size={12} className="text-gray-600" />
+        <Minus size={14} className="text-gray-600" />
       </button>
-      <span className="font-bold text-sm w-5 text-center">
+      <span className="font-bold text-base w-6 text-center text-gray-900">
         {updating ? '...' : item.quantity}
       </span>
       <button 
         onClick={() => onQuantityChange(item.id, 1)} 
         disabled={updating}
-        className={`p-1 rounded-full hover:bg-gray-100 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        <Plus size={12} className="text-gray-600" />
+        <Plus size={14} className="text-gray-600" />
       </button>
     </div>
   </div>
@@ -107,22 +110,30 @@ const OrderItem = ({ item, onQuantityChange, updating }) => (
 const DiningOption = ({ icon, title, description, selected, onClick }) => (
   <div
     onClick={onClick}
-    className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-300 ${
-      selected ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'
+    className={`flex items-center gap-4 p-5 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+      selected 
+        ? 'border-orange-500 bg-orange-50 shadow-md' 
+        : 'border-gray-200 bg-white hover:border-orange-300 hover:shadow-sm'
     }`}
   >
+    <div className={`p-3 rounded-xl ${selected ? 'bg-orange-100' : 'bg-gray-100'}`}>
     {icon}
-    <div>
-      <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
-      <p className="text-xs text-gray-500">{description}</p>
     </div>
-    {selected && <CheckCircle size={20} className="ml-auto text-orange-500" />}
+    <div className="flex-1">
+      <h3 className="font-semibold text-gray-900 text-base mb-1">{title}</h3>
+      <p className="text-sm text-gray-600">{description}</p>
+    </div>
+    {selected && (
+      <div className="p-2 bg-orange-500 rounded-full">
+        <CheckCircle size={20} className="text-white" />
+      </div>
+    )}
   </div>
 );
 
 const SectionCard = ({ title, children }) => (
-    <div className="bg-white p-5 rounded-lg shadow-sm">
-        <h2 className="text-md font-bold text-gray-800 mb-4">{title}</h2>
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-lg font-bold text-gray-900 mb-5">{title}</h2>
         {children}
     </div>
 );
@@ -130,7 +141,8 @@ const SectionCard = ({ title, children }) => (
 
 // --- Main Cart Component ---
 const SmartCanteenCart = () => {
-  const { cartItems, loading: cartLoading, error: cartError, refreshCart } = useCartData();
+  const navigate = useNavigate();
+  const { cartItems, loading: cartLoading, error: cartError, refreshCart, clearCartState } = useCartData();
   const [diningOption, setDiningOption] = useState('dine-in');
   const [pickupTime, setPickupTime] = useState('');
   const [timeSlots, setTimeSlots] = useState([]);
@@ -213,13 +225,21 @@ const SmartCanteenCart = () => {
   const cleanupModals = () => {
     setShowPaymentModal(false);
     if (window.currentRazorpayInstance) {
-      // Check if it's a DOM element (our custom modal) or Razorpay instance
-      if (window.currentRazorpayInstance instanceof Element) {
-        document.body.removeChild(window.currentRazorpayInstance);
-      } else if (typeof window.currentRazorpayInstance.close === 'function') {
-        window.currentRazorpayInstance.close();
+      try {
+        // Check if it's a DOM element (our custom modal) or Razorpay instance
+        if (window.currentRazorpayInstance instanceof Element) {
+          // Check if the element is actually a child of document.body before removing
+          if (document.body.contains(window.currentRazorpayInstance)) {
+            document.body.removeChild(window.currentRazorpayInstance);
+          }
+        } else if (typeof window.currentRazorpayInstance.close === 'function') {
+          window.currentRazorpayInstance.close();
+        }
+      } catch (error) {
+        console.log('Modal cleanup error (non-critical):', error);
+      } finally {
+        window.currentRazorpayInstance = null;
       }
-      window.currentRazorpayInstance = null;
     }
   };
 
@@ -257,6 +277,9 @@ const SmartCanteenCart = () => {
         };
 
         console.log('Order data being sent:', orderData);
+        console.log('User data:', userData);
+        console.log('User ID:', userData.id);
+        console.log('User ID type:', typeof userData.id);
         console.log('Total amount:', total);
         console.log('Subtotal:', subtotal);
 
@@ -272,9 +295,15 @@ const SmartCanteenCart = () => {
             async (paymentResponse) => {
               // Payment successful
               console.log('Payment successful:', paymentResponse);
-              refreshCart(); // Clear cart
-              // Redirect to order confirmation page
-              window.location.href = `/user/order?orderNumber=${paymentResponse.orderNumber}&transactionId=${paymentResponse.transactionId}`;
+              // Clear cart immediately after successful payment
+              console.log('Clearing cart after online payment...');
+              await clearCartAfterPayment(userData.id);
+              console.log('Cart cleared from database');
+              // Clear cart state in UI immediately
+              clearCartState();
+              console.log('Cart state cleared from UI');
+              // Redirect to orders page to see all orders
+              navigate('/user/orders');
             },
             (error) => {
               // Payment failed
@@ -309,9 +338,16 @@ const SmartCanteenCart = () => {
             const { updateTransactionStatus } = await import('../../lib/payment-utils');
             await updateTransactionStatus(transaction.id, 'success');
             
-            refreshCart(); // Clear cart
+            // Clear cart immediately after successful order placement
+            console.log('Clearing cart after fallback payment...');
+            await clearCartAfterPayment(userData.id);
+            console.log('Cart cleared from database');
+            // Clear cart state in UI immediately
+            clearCartState();
+            console.log('Cart state cleared from UI');
+            
             alert('Payment gateway unavailable. Order placed successfully!');
-            window.location.href = `/user/order?orderNumber=${transaction.orderNumber}&transactionId=${transaction.id}`;
+            navigate('/user/orders');
           } catch (fallbackError) {
             console.error('Fallback payment failed:', fallbackError);
             alert('Payment system unavailable. Please try again later.');
@@ -327,9 +363,24 @@ const SmartCanteenCart = () => {
     }
   };
 
-  const handlePaymentSuccess = (transaction) => {
-    // Refresh cart after successful payment
-    refreshCart();
+  const handlePaymentSuccess = async (transaction) => {
+    try {
+      console.log('Payment success - clearing cart...');
+      // Clear cart from database
+      await clearCartAfterPayment(userData.id);
+      console.log('Cart cleared from database');
+      // Clear cart state in UI immediately
+      clearCartState();
+      console.log('Cart state cleared from UI');
+      // Refresh cart context
+      refreshCart();
+      console.log('Cart context refreshed');
+    } catch (error) {
+      console.error('Error clearing cart after payment:', error);
+      // Still clear UI state even if database clear fails
+      clearCartState();
+      console.log('Cart state cleared from UI (fallback)');
+    }
   };
 
   const handlePaymentError = (error) => {
@@ -343,26 +394,33 @@ const SmartCanteenCart = () => {
   const total = subtotal + serviceFee + grabGoFee - discount;
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-white min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-            <ShoppingCart className="text-gray-700" size={28} />
-            <h1 className="text-2xl font-bold text-gray-800">Your Canteen Cart</h1>
+        <div className="flex items-center gap-3 mb-8">
+            <div className="p-3 bg-orange-50 rounded-full">
+              <ShoppingCart className="text-orange-600" size={28} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Your Canteen Cart</h1>
+              <p className="text-gray-500 text-sm mt-1">Review your items and complete your order</p>
+            </div>
         </div>
         
         {cartError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <p className="text-red-700">{cartError}</p>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <p className="text-red-700 font-medium">{cartError}</p>
             </div>
           </div>
         )}
 
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
             
             {cartLoading ? (
               <SectionCard title="Cart Items">
@@ -495,59 +553,59 @@ const SmartCanteenCart = () => {
                 </div>
             </SectionCard>
 
-                        <SectionCard title="Payment Method">
-                <div className="space-y-3">
-                    <p className="text-gray-500 text-xs mb-3">Select your preferred payment method</p>
+            <SectionCard title="Payment Method">
+                <div className="space-y-4">
+                    <p className="text-gray-600 text-sm mb-4">Select your preferred payment method</p>
                     
                     {/* Payment Method Options */}
-                    <div className="space-y-2">
+                <div className="space-y-3">
                         {/* Cash on Delivery */}
-                        <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                        <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                             selectedPaymentMethod === 'cash'
-                                ? 'border-green-400 bg-green-50 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                ? 'border-green-500 bg-green-50 shadow-md'
+                                : 'border-gray-200 hover:border-green-300 hover:bg-green-50/30'
                         }`}>
-                            <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-md">
-                                <CreditCard size={16} className="text-green-600" />
+                            <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-xl">
+                                <CreditCard size={18} className="text-green-600" />
                             </div>
                             <div className="flex-grow">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <input 
                                         type="radio" 
                                         name="paymentMethod" 
                                         value="cash"
                                         checked={selectedPaymentMethod === 'cash'}
                                         onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                                        className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300"
+                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
                                     />
-                                    <span className="font-semibold text-sm text-gray-800">Cash on Delivery</span>
+                                    <span className="font-semibold text-base text-gray-900">Cash on Delivery</span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-0.5">Pay at the counter when collecting your order</p>
+                                <p className="text-sm text-gray-600 mt-1">Pay at the counter when collecting your order</p>
                             </div>
                         </label>
 
                         {/* Online Payment */}
-                        <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                        <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                             selectedPaymentMethod === 'online'
-                                ? 'border-blue-400 bg-blue-50 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
                         }`}>
-                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-md">
-                                <Landmark size={16} className="text-blue-600" />
+                            <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-xl">
+                                <Landmark size={18} className="text-blue-600" />
                             </div>
                             <div className="flex-grow">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <input 
                                         type="radio" 
                                         name="paymentMethod" 
                                         value="online"
                                         checked={selectedPaymentMethod === 'online'}
                                         onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                                        className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                                     />
-                                    <span className="font-semibold text-sm text-gray-800">Online Payment</span>
+                                    <span className="font-semibold text-base text-gray-900">Online Payment</span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-0.5">Pay securely using UPI, Cards, or Net Banking</p>
+                                <p className="text-sm text-gray-600 mt-1">Pay securely using UPI, Cards, or Net Banking</p>
                             </div>
                         </label>
                     </div>
@@ -555,8 +613,13 @@ const SmartCanteenCart = () => {
             </SectionCard>
           </div>
 
-          <div className="bg-white p-5 rounded-lg shadow-sm h-fit sticky top-6">
-            <h2 className="text-md font-bold text-gray-800 border-b pb-3 mb-3">Order Summary</h2>
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Receipt className="w-6 h-6 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Order Summary</h2>
+            </div>
             <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto pr-2">
                 {cartLoading ? (
                   <div className="space-y-3">
@@ -574,46 +637,65 @@ const SmartCanteenCart = () => {
                     ))}
                   </div>
                 ) : cartItems.length === 0 ? (
-                  <div className="text-center py-4">
-                    <p className="text-gray-400 text-sm">No items in cart</p>
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <ShoppingCart className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm">No items in cart</p>
                   </div>
                 ) : (
                   cartItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 py-2">
-                      <img src={item.image} alt={item.name} className="w-10 h-10 rounded-md object-cover" />
-                      <div className="flex-grow">
-                        <p className="font-semibold text-xs text-gray-800 truncate">{item.name}</p>
-                        <p className="text-xs text-gray-500">₹{item.price.toFixed(2)} × {item.quantity}</p>
+                    <div key={item.id} className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-gray-50 transition-colors">
+                      <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-cover shadow-sm" />
+                      <div className="flex-grow min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
+                        <p className="text-xs text-gray-600">₹{item.price.toFixed(2)} × {item.quantity}</p>
                       </div>
-                      <span className="font-bold text-sm text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                              <span className="font-bold text-sm text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))
                 )}
             </div>
             
-            <div className="mt-4 pt-4 border-t">
-                <label className="text-xs font-medium text-gray-600 mb-2 block">Apply Coupon</label>
-                <div className="flex gap-2">
+            <div className="mt-6 pt-6 border-t border-gray-200">
+                <label className="text-sm font-medium text-gray-700 mb-3 block">Apply Coupon</label>
+                <div className="flex gap-3">
                     <div className="relative flex-grow">
-                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                        <input type="text" placeholder="MITE20" className="w-full text-sm pl-9 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="MITE20" 
+                            className="w-full text-sm pl-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+                        />
                     </div>
-                    <button className="bg-gray-200 text-gray-700 font-bold text-sm py-2 px-4 rounded-md hover:bg-gray-300">Apply</button>
+                    <button className="bg-orange-500 text-white font-semibold text-sm py-3 px-6 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">Apply</button>
                 </div>
             </div>
 
-            <div className="mt-4 border-t pt-4 space-y-2 text-sm text-gray-600">
-              <dl className="space-y-2">
-                  <div className="flex justify-between"><dt>Subtotal</dt><dd className="font-medium text-gray-800">₹{subtotal.toFixed(2)}</dd></div>
-                  <div className="flex justify-between"><dt>Service Fee</dt><dd className="font-medium text-gray-800">₹{serviceFee.toFixed(2)}</dd></div>
+            <div className="mt-6 border-t border-gray-200 pt-6 space-y-3 text-sm">
+              <dl className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <dt className="text-gray-600">Subtotal</dt>
+                    <dd className="font-medium text-gray-900">₹{subtotal.toFixed(2)}</dd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <dt className="text-gray-600">Service Fee</dt>
+                    <dd className="font-medium text-gray-900">₹{serviceFee.toFixed(2)}</dd>
+                  </div>
                   {diningOption === 'grab-and-go' && (
-                    <div className="flex justify-between text-orange-600"><dt>Grab & Go Charge</dt><dd className="font-medium">+₹10.00</dd></div>
+                    <div className="flex justify-between items-center text-orange-600">
+                      <dt>Grab & Go Charge</dt>
+                      <dd className="font-medium">+₹10.00</dd>
+                    </div>
                   )}
-                  <div className="flex justify-between text-green-600"><dt>Discount</dt><dd className="font-medium">-₹{discount.toFixed(2)}</dd></div>
+                  <div className="flex justify-between items-center text-green-600">
+                    <dt>Discount</dt>
+                    <dd className="font-medium">-₹{discount.toFixed(2)}</dd>
+                  </div>
               </dl>
             </div>
-            <div className="mt-4 border-t pt-4">
-              <div className="flex justify-between items-center text-md font-bold">
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className="flex justify-between items-center text-lg font-bold text-gray-900">
                 <span>Total</span>
                 <span>₹{total.toFixed(2)}</span>
               </div>
@@ -621,22 +703,22 @@ const SmartCanteenCart = () => {
             <button 
               onClick={handlePaymentClick}
               disabled={cartItems.length === 0}
-              className={`w-full mt-4 font-semibold py-2.5 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out flex items-center justify-center gap-2 text-sm ${
+              className={`w-full mt-6 font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center gap-3 text-base ${
                 cartItems.length === 0
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : selectedPaymentMethod === 'online'
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                  : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl transform hover:scale-[1.02]'
+                  : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-xl transform hover:scale-[1.02]'
               }`}
             >
               {selectedPaymentMethod === 'online' ? (
                 <>
-                  <Landmark size={16} />
+                  <Landmark size={20} />
                   Pay Online ₹{total.toFixed(2)}
                 </>
               ) : (
                 <>
-                  <CreditCard size={16} />
+                  <CreditCard size={20} />
                   Place Order ₹{total.toFixed(2)}
                 </>
               )}
@@ -669,7 +751,7 @@ const SmartCanteenCart = () => {
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-white">
       <Header />
       <main className="flex-1 pt-24 pb-8">
         <SmartCanteenCart />
