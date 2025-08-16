@@ -8,6 +8,7 @@ import Cart from './pages/user/cart.jsx'
 import Order from './pages/user/order.jsx'
 import Profile from './pages/user/profile.jsx'
 import Login from './pages/auth/Login.jsx'
+import { CartProvider } from './lib/cart-context'
 
 // Session check component
 const ProtectedRoute = ({ children }) => {
@@ -58,36 +59,38 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/user/dashboard" element={<UserDashboard />} />
-        <Route path="/staff/dashboard" element={<StaffDashboard />} />
-        <Route path="/user/contact" element={
-          <ProtectedRoute>
-            <Contact />
-          </ProtectedRoute>
-        } />
-        <Route path="/user/cart" element={
-          <ProtectedRoute>
-            <Cart />
-          </ProtectedRoute>
-        } />
-        <Route path="/user/order" element={
-          <ProtectedRoute>
-            <Order />
-          </ProtectedRoute>
-        } />
-        <Route path="/user/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/sign-up" element={<Login />} />
-        <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
-        {/* Add more routes here as needed */}
-      </Routes>
-    </Router>
+    <CartProvider>
+      <Router>
+        <Routes>
+          <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/user/contact" element={
+            <ProtectedRoute>
+              <Contact />
+            </ProtectedRoute>
+          } />
+          <Route path="/user/cart" element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          } />
+          <Route path="/user/order" element={
+            <ProtectedRoute>
+              <Order />
+            </ProtectedRoute>
+          } />
+          <Route path="/user/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/sign-up" element={<Login />} />
+          <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
+          {/* Add more routes here as needed */}
+        </Routes>
+      </Router>
+    </CartProvider>
   )
 }
 

@@ -3,6 +3,7 @@ import { MapPin, ShoppingCart, Truck, ChevronDown, Menu, X, LogOut, LogIn, Refre
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from 'react-router-dom';
 import supabase from '../../lib/supabase';
+import { useCart } from '../../lib/cart-context';
 
 import { generateAvatarFromEmail, generateInitials, getDisplayName, getDisplayEmail } from '../../lib/avatar-utils';
 
@@ -127,6 +128,7 @@ const Header = () => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [userSession, setUserSession] = useState(null);
     const navigate = useNavigate();
+    const { cartCount } = useCart();
 
     // Get user session data
     useEffect(() => {
@@ -185,12 +187,52 @@ const Header = () => {
         // Function to get address from coordinates using reverse geocoding
         const getAddressFromCoords = async (latitude, longitude) => {
             try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-                );
-                const data = await response.json();
-                
-                if (data.display_name) {
+                // Try multiple geocoding services with fallbacks
+                const services = [
+                    // Service 1: OpenStreetMap Nominatim (with proper headers)
+                    async () => {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+                            {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'User-Agent': 'MITE-Canteen-App/1.0'
+                                }
+                            }
+                        );
+                        if (!response.ok) throw new Error('Nominatim service unavailable');
+                        return await response.json();
+                    },
+                    // Service 2: BigDataCloud API (free tier, no CORS issues)
+                    async () => {
+                        const response = await fetch(
+                            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                        );
+                        if (!response.ok) throw new Error('BigDataCloud service unavailable');
+                        return await response.json();
+                    },
+                    // Service 3: Fallback to coordinates
+                    async () => {
+                        return { display_name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` };
+                    }
+                ];
+
+                let data = null;
+                let lastError = null;
+
+                // Try each service until one works
+                for (const service of services) {
+                    try {
+                        data = await service();
+                        break; // If successful, break out of the loop
+                    } catch (err) {
+                        lastError = err;
+                        console.warn('Geocoding service failed:', err.message);
+                        continue; // Try next service
+                    }
+                }
+
+                if (data && data.display_name) {
                     // Extract the most relevant parts of the address and filter out pincodes
                     const addressParts = data.display_name.split(', ');
                     let displayAddress = '';
@@ -205,14 +247,19 @@ const Header = () => {
                     }
                     
                     setAddress(displayAddress);
+                } else {
+                    // Fallback to coordinates if no address found
+                    setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
                 }
             } catch (err) {
                 console.error('Error getting address:', err);
-                // If reverse geocoding fails, we'll still show coordinates
+                // Fallback to coordinates if all services fail
+                setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
             }
         };
 
-        const getLocation = () => {
+        // Simple location display without external geocoding (avoids CORS issues)
+        const getSimpleLocation = () => {
             setLoading(true);
             setError(null);
             
@@ -221,13 +268,31 @@ const Header = () => {
                     (position) => {
                         const { latitude, longitude } = position.coords;
                         setCoords({ latitude, longitude });
-                        getAddressFromCoords(latitude, longitude);
+                        
+                        // Simple location detection based on coordinates
+                        // MITE Campus coordinates (approximate): 13.2743, 74.7599
+                        const miteLat = 13.2743;
+                        const miteLon = 74.7599;
+                        const distance = Math.sqrt(
+                            Math.pow(latitude - miteLat, 2) + Math.pow(longitude - miteLon, 2)
+                        );
+                        
+                        if (distance < 0.01) { // Within ~1km of MITE campus
+                            setAddress('MITE Campus');
+                        } else if (distance < 0.05) { // Within ~5km
+                            setAddress('Near MITE Campus');
+                        } else {
+                            setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                        }
+                        
                         setLoading(false);
                     },
                     (error) => {
                         console.error('Geolocation error:', error);
                         setError('Location access denied');
                         setLoading(false);
+                        // Set a default location for MITE campus
+                        setAddress('MITE Campus, Moodbidri');
                     },
                     {
                         enableHighAccuracy: true,
@@ -238,7 +303,14 @@ const Header = () => {
             } else {
                 setError('Geolocation not supported');
                 setLoading(false);
+                // Set a default location for MITE campus
+                setAddress('MITE Campus, Moodbidri');
             }
+        };
+
+        const getLocation = () => {
+            // Use simple location detection to avoid CORS issues
+            getSimpleLocation();
         };
 
         useEffect(() => {
@@ -250,7 +322,7 @@ const Header = () => {
                 <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-gray-500" />
                     <span className="text-xs text-gray-600 font-medium">
-                        {loading ? 'Getting location...' : address || 'Location' || 'Location'}
+                        {loading ? 'Getting location...' : address || 'MITE Campus' || 'Location'}
                     </span>
                 </div>
             );
@@ -260,7 +332,7 @@ const Header = () => {
             <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600 font-medium">
-                    {loading ? 'Getting location...' : address || 'Location'}
+                    {loading ? 'Getting location...' : address || 'MITE Campus'}
                 </span>
                 <button
                     onClick={getLocation}
@@ -320,10 +392,14 @@ const Header = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="relative flex items-center gap-3 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transition-all">
+                        <Link to="/user/cart" className="relative flex items-center gap-3 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transition-all">
                             <ShoppingCart className="w-5 h-5" />
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 text-gray-900 text-xs font-bold rounded-full flex items-center justify-center border-2 border-white/80">3</span>
-                        </button>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 text-gray-900 text-xs font-bold rounded-full flex items-center justify-center border-2 border-white/80">
+                                    {cartCount > 99 ? '99+' : cartCount}
+                                </span>
+                            )}
+                        </Link>
                         <button className="p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
                             {isMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}
                         </button>
@@ -347,7 +423,11 @@ const Header = () => {
                             <>
                                 <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 transition-colors">
                                     <ShoppingCart className="w-6 h-6" />
-                                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">3</span>
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+                                            {cartCount > 99 ? '99+' : cartCount}
+                                        </span>
+                                    )}
                                 </Link>
                                 
                                 <Link to="/user/order" className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">

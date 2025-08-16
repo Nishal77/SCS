@@ -199,6 +199,19 @@ export default function Login() {
           return;
         }
 
+        // Set the user in Supabase auth so RLS policies work
+        // We'll use the profile ID as the user ID in Supabase auth
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: profile.email,
+          password: profile.password,
+        });
+
+        // If Supabase auth fails (which it will since we're not using it for signup),
+        // we'll create a session manually and use a workaround for RLS
+        if (authError) {
+          console.log('Supabase auth not available, using custom session');
+        }
+
         // Create a session manually since we're not using Supabase Auth for login
         // We'll store the user info in localStorage for session management
         localStorage.setItem('user_session', JSON.stringify({

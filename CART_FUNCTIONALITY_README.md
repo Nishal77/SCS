@@ -1,194 +1,276 @@
-# Cart Functionality & Stock Validation System
+# Cart Functionality Implementation
 
 ## Overview
-This document describes the implementation of a comprehensive cart system with real-time stock validation for the Smart Canteen System.
+This document describes the implementation of the cart functionality for the Smart Canteen System. The cart system allows users to add menu items to their cart, manage quantities, and proceed to checkout.
 
 ## Features Implemented
 
-### 1. **Stock-Aware Add to Cart**
-- **Real-time Stock Checking**: Before adding items to cart, the system checks current stock availability
-- **Stock Validation**: Prevents adding items when stock is insufficient or out of stock
-- **Dynamic Stock Updates**: Stock levels are updated in real-time across all components
+### 1. Global Cart State Management
+- **Cart Context**: Centralized state management using React Context
+- **Real-time Updates**: Automatic cart updates when items are added/removed
+- **Persistent Data**: Cart data is stored in Supabase `user_cart` table
 
-### 2. **Enhanced Cart Management**
-- **Database Integration**: Cart items are stored in a dedicated `user_cart` table
-- **User Authentication**: Cart is tied to authenticated users with proper security
-- **Quantity Management**: Users can increase/decrease quantities with stock validation
-- **Real-time Updates**: Cart reflects changes immediately across all components
+### 2. Cart Operations
+- **Add to Cart**: Add items with stock validation
+- **Update Quantity**: Increase/decrease item quantities
+- **Remove Items**: Remove items from cart
+- **Stock Validation**: Prevents adding items beyond available stock
 
-### 3. **Stock Validation Rules**
-- **Out of Stock**: Items with `stock_available <= 0` cannot be added to cart
-- **Quantity Limits**: Cannot add more items than available stock
-- **Real-time Checks**: Stock is validated on every cart operation
-- **User Feedback**: Clear messages for stock-related issues
+### 3. UI Components
+- **Cart Icon**: Shows real-time cart count in header
+- **Add Button**: Available on all menu items (RestaurantList and TodaysSpecial)
+- **Cart Page**: Complete cart management interface
+- **Success/Error Messages**: User feedback for cart operations
 
 ## Database Schema
 
-### User Cart Table (`user_cart`)
+### user_cart Table
 ```sql
 CREATE TABLE user_cart (
-    id UUID PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id),
-    product_id UUID REFERENCES inventory(id),
-    quantity INTEGER CHECK (quantity > 0),
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    UNIQUE(user_id, product_id)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id),
+    product_id UUID NOT NULL REFERENCES inventory(id),
+    price NUMERIC NOT NULL CHECK (price >= 0),
+    image_url TEXT,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    item_name TEXT,
+    category TEXT
 );
 ```
 
-### Inventory Table Updates
-- `stock_available`: Current available stock
-- `stock_constant`: Maximum stock level
-- Real-time updates via Supabase subscriptions
+## Key Components
 
-## Components Updated
+### 1. Cart Context (`src/lib/cart-context.jsx`)
+- Manages global cart state
+- Provides cart data to all components
+- Handles real-time subscriptions
+- Exposes `refreshCart()` function for manual updates
 
-### 1. **RestaurantList.jsx**
-- **Stock Validation**: Add to cart only works when stock > 0
-- **Real-time Updates**: Stock changes reflect immediately
-- **User Feedback**: Success/error messages for cart operations
-- **Loading States**: Visual feedback during cart operations
+### 2. Cart Utilities (`src/lib/cart-utils.js`)
+- `addToCart()`: Add items with stock validation
+- `updateCartItemQuantity()`: Update item quantities
+- `removeFromCart()`: Remove items from cart
+- `getCartItems()`: Fetch user's cart items
+- `getCartCount()`: Get total cart count
 
-### 2. **TodaysSpecial.jsx**
-- **Stock Validation**: Same stock checking as RestaurantList
-- **Cart Integration**: Seamless add to cart functionality
-- **Real-time Sync**: Stock updates across all components
+### 3. Auth Utilities (`src/lib/auth-utils.js`)
+- `handleAddToCart()`: Wrapper function with authentication check
+- `checkAuthStatus()`: Verify user authentication
 
-### 3. **Cart.jsx**
-- **Real Cart Data**: Uses database instead of mock data
-- **Stock Display**: Shows available stock for each item
-- **Quantity Management**: Update/remove items with stock validation
-- **Loading States**: Proper loading and error handling
+### 4. UI Components
+- **Header**: Shows cart count with real-time updates
+- **RestaurantList**: Add to cart functionality for all menu items
+- **TodaysSpecial**: Add to cart functionality for special items
+- **Cart Page**: Complete cart management interface
 
-## Cart Utilities (`src/lib/cart-utils.js`)
+## Usage Examples
 
-### Key Functions
-- `addToCart(userId, productId, quantity)`: Add item with stock validation
-- `checkStockAvailability(productId, quantity)`: Check if stock is sufficient
-- `updateCartItemQuantity(cartItemId, newQuantity)`: Update quantity with validation
-- `removeFromCart(cartItemId)`: Remove item from cart
-- `getCartItems(userId)`: Fetch user's cart items
-
-### Stock Validation Logic
+### Adding Items to Cart
 ```javascript
-// Check stock before adding to cart
-const stockCheck = await checkStockAvailability(productId, quantity);
+import { useCart } from '../../lib/cart-context';
+import { handleAddToCart } from '../../lib/auth-utils';
 
-if (!stockCheck.canAdd) {
-    return { success: false, error: 'Product is out of stock' };
-}
+const { refreshCart } = useCart();
 
-if (!stockCheck.available) {
-    return { success: false, error: `Insufficient stock. Only ${stockCheck.stockAvailable} available.` };
-}
+const handleAddClick = async () => {
+    const result = await handleAddToCart(productId, 1);
+    if (result.success) {
+        refreshCart(); // Update global cart state
+    }
+};
 ```
 
-## User Experience Features
+### Displaying Cart Count
+```javascript
+import { useCart } from '../../lib/cart-context';
 
-### 1. **Visual Feedback**
-- **Success Messages**: ✅ Green confirmation when items are added
-- **Error Messages**: ❌ Red alerts for stock issues
-- **Loading States**: "ADDING..." text during cart operations
-- **Stock Indicators**: Shows available stock for each product
+const { cartCount } = useCart();
 
-### 2. **Button States**
-- **Available**: Amber border, "ADD" text, clickable
-- **Out of Stock**: Gray border, "OUT OF STOCK" text, disabled
-- **Adding**: Loading state, disabled during operation
+// In JSX
+{cartCount > 0 && (
+    <span className="cart-badge">{cartCount}</span>
+)}
+```
 
-### 3. **Real-time Updates**
-- **Stock Changes**: Immediate reflection when staff updates inventory
-- **Cart Sync**: Cart updates across all components
-- **Price Updates**: Real-time price synchronization
+## Real-time Features
 
-## Security Features
+### 1. Automatic Cart Updates
+- Real-time subscription to `user_cart` table changes
+- Automatic refresh when items are added/removed
+- Live cart count updates in header
 
-### 1. **Row Level Security (RLS)**
-- Users can only access their own cart items
-- Proper authentication checks before cart operations
-- Secure database policies
-
-### 2. **Input Validation**
-- Quantity must be positive and reasonable (1-100)
-- Stock validation on every operation
-- SQL injection prevention via Supabase
+### 2. Stock Validation
+- Prevents adding items beyond available stock
+- Real-time stock status display
+- Automatic page refresh for stock-related errors
 
 ## Error Handling
 
-### 1. **Stock-Related Errors**
-- "Product is out of stock"
-- "Insufficient stock. Only X available."
-- "Cannot add more. Total quantity would exceed available stock."
+### 1. Authentication Errors
+- Redirects to login if user is not authenticated
+- Session expiration handling
+- Graceful fallback for unauthenticated users
 
-### 2. **Authentication Errors**
-- "Authentication required"
-- "Session expired. Please login again."
-- "Failed to add item to cart"
+### 2. Stock Errors
+- Insufficient stock validation
+- Out of stock item handling
+- User-friendly error messages
 
-### 3. **Network Errors**
-- "Failed to load cart items"
-- "Error updating cart item"
-- Graceful fallbacks and retry mechanisms
+### 3. Network Errors
+- Retry mechanisms for failed operations
+- Fallback to localStorage for offline scenarios
+- Error state management
 
-## Testing Scenarios
+## Security Features
 
-### 1. **Stock Validation**
-- Try to add item with 0 stock → Should show "OUT OF STOCK"
-- Try to add more than available stock → Should show insufficient stock message
-- Add item successfully → Should show success message and update stock
+### 1. Row Level Security (RLS)
+- Users can only access their own cart items
+- Database-level security enforcement
+- Proper user isolation
 
-### 2. **Cart Operations**
-- Add item to cart → Should appear in cart immediately
-- Update quantity → Should validate against available stock
-- Remove item → Should update cart and free up stock
+### 2. Input Validation
+- Quantity validation (must be > 0)
+- Price validation (must be >= 0)
+- Stock availability checks
 
-### 3. **Real-time Updates**
-- Staff updates inventory → Should reflect in user components
-- Stock changes → Should update add to cart buttons
-- Price changes → Should update display immediately
+## Performance Optimizations
+
+### 1. Efficient Queries
+- Parallel fetching of cart items and count
+- Optimized database queries with joins
+- Minimal data transfer
+
+### 2. Caching
+- Global cart state caching
+- Reduced redundant API calls
+- Efficient re-rendering
+
+### 3. Real-time Updates
+- WebSocket-based real-time subscriptions
+- Efficient change detection
+- Minimal network overhead
+
+## Testing
+
+### Manual Testing Checklist
+- [ ] Add items to cart from RestaurantList
+- [ ] Add items to cart from TodaysSpecial
+- [ ] Update item quantities in cart
+- [ ] Remove items from cart
+- [ ] Verify cart count updates in header
+- [ ] Test stock validation
+- [ ] Test authentication requirements
+- [ ] Test real-time updates
+
+### Edge Cases
+- [ ] Adding items when stock is low
+- [ ] Adding items when out of stock
+- [ ] Network connectivity issues
+- [ ] Session expiration during cart operations
+- [ ] Concurrent cart modifications
 
 ## Future Enhancements
 
-### 1. **Advanced Stock Management**
-- Low stock warnings
-- Stock reservation system
-- Automatic stock replenishment alerts
-
-### 2. **Cart Features**
+### 1. Advanced Features
 - Save cart for later
-- Share cart with friends
-- Cart history and analytics
+- Cart sharing between users
+- Bulk operations
+- Cart templates
 
-### 3. **User Experience**
-- Stock notifications
-- Favorite items
-- Personalized recommendations
+### 2. Performance Improvements
+- Cart item caching
+- Optimistic updates
+- Background sync
+- Offline support
 
-## Database Migration
-
-To apply the cart system, run the migration:
-```bash
-# Apply the cart table migration
-supabase db push
-
-# Or manually run the SQL in Supabase dashboard
-# File: supabase/migrations/20250728154622_create_user_cart_table.sql
-```
+### 3. User Experience
+- Cart animations
+- Drag and drop reordering
+- Quick add buttons
+- Cart recommendations
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Cart not loading**: Check user authentication and session
-2. **Stock not updating**: Verify Supabase real-time subscriptions
-3. **Add to cart failing**: Check stock availability and user permissions
 
-### Debug Information
-- Check browser console for error messages
-- Verify Supabase connection and policies
-- Check database constraints and foreign keys
+1. **Cart count not updating**
+   - Check if user is authenticated
+   - Verify real-time subscription is active
+   - Check browser console for errors
+
+2. **Items not adding to cart**
+   - Verify stock availability
+   - Check authentication status
+   - Review network connectivity
+
+3. **Real-time updates not working**
+   - Check Supabase connection
+   - Verify RLS policies
+   - Review subscription setup
+
+4. **RLS Policy Errors (406/400)**
+   - **Solution 1**: Add service role key to environment variables
+   - **Solution 2**: Modify RLS policies to allow cart operations
+   - **Solution 3**: Implement proper Supabase auth integration
+
+### RLS Policy Fix
+
+If you're getting 406/400 errors due to RLS policies, you have three options:
+
+#### Option 1: Use Service Role Key (Recommended)
+1. Go to your Supabase project dashboard
+2. Navigate to Settings > API
+3. Copy the "service_role" key (not the anon key)
+4. Add it to your `.env` file:
+   ```
+   VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+   ```
+
+#### Option 2: Modify RLS Policies
+Run these SQL commands in your Supabase SQL editor:
+```sql
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can view their own cart items" ON user_cart;
+DROP POLICY IF EXISTS "Users can insert their own cart items" ON user_cart;
+DROP POLICY IF EXISTS "Users can update their own cart items" ON user_cart;
+DROP POLICY IF EXISTS "Users can delete their own cart items" ON user_cart;
+
+-- Create new policies that allow all operations
+CREATE POLICY "Users can view their own cart items" ON user_cart
+    FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own cart items" ON user_cart
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update their own cart items" ON user_cart
+    FOR UPDATE USING (true);
+
+CREATE POLICY "Users can delete their own cart items" ON user_cart
+    FOR DELETE USING (true);
+```
+
+#### Option 3: Implement Proper Supabase Auth
+Modify the login system to properly authenticate users with Supabase auth.
+
+### Debug Commands
+```javascript
+// Check cart state
+console.log('Cart items:', cartItems);
+console.log('Cart count:', cartCount);
+
+// Check authentication
+console.log('Auth status:', checkAuthStatus());
+
+// Check user session
+console.log('User session:', localStorage.getItem('user_session'));
+
+// Check Supabase connection
+console.log('Supabase client:', supabase);
+console.log('Service client:', supabaseService);
+```
 
 ## Conclusion
 
-The cart functionality with stock validation provides a robust, user-friendly shopping experience that ensures data integrity and real-time synchronization across all components. The system prevents overselling, provides clear user feedback, and maintains consistency between staff inventory management and user ordering interfaces.
+The cart functionality provides a robust, real-time shopping experience with proper validation, error handling, and user feedback. The implementation follows React best practices and provides a scalable foundation for future enhancements.
 

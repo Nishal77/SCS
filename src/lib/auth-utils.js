@@ -76,9 +76,8 @@ export const redirectToLogin = (navigate) => {
 };
 
 // Handle add to cart with authentication check
-export const handleAddToCart = async (navigate, productId, quantity = 1) => {
+export const handleAddToCart = async (productId, quantity = 1) => {
     if (!checkAuthStatus()) {
-        redirectToLogin(navigate);
         return { success: false, error: 'Authentication required' };
     }
     
@@ -86,22 +85,41 @@ export const handleAddToCart = async (navigate, productId, quantity = 1) => {
         // Get current user ID from session
         const userSession = localStorage.getItem('user_session');
         if (!userSession) {
-            redirectToLogin(navigate);
             return { success: false, error: 'Session expired' };
         }
         
         const sessionData = JSON.parse(userSession);
         const userId = sessionData.id;
         
+        console.log('Adding to cart:', { userId, productId, quantity });
+        
         // Import cart utilities dynamically to avoid circular dependencies
-        const { addToCart } = await import('./cart-utils');
+        const { addToCart, debugCartOperation } = await import('./cart-utils');
         
         // Add item to cart with stock validation
         const result = await addToCart(userId, productId, quantity);
         
+        if (!result.success) {
+            console.log('Cart operation failed, running debug...');
+            // Run debug function to identify the issue
+            await debugCartOperation(userId, productId);
+        }
+        
         return result;
     } catch (error) {
         console.error('Error in handleAddToCart:', error);
+        
+        // Get user ID for debugging
+        const userSession = localStorage.getItem('user_session');
+        if (userSession) {
+            const sessionData = JSON.parse(userSession);
+            const userId = sessionData.id;
+            
+            // Run debug function to identify the issue
+            const { debugCartOperation } = await import('./cart-utils');
+            await debugCartOperation(userId, productId);
+        }
+        
         return { success: false, error: 'Failed to add item to cart' };
     }
 }; 

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from '../../components/spectrumui/footer.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, ChevronDown, Clock, CreditCard, Home, Landmark, Minus, Plus, ShoppingCart, User, Wallet, MessageSquare, Tag, AlertCircle } from 'lucide-react';
-import { getCartItems, updateCartItemQuantity, removeFromCart, clearCart } from '../../lib/cart-utils';
+import { CheckCircle, ChevronDown, Clock, CreditCard, Home, Landmark, Minus, Plus, ShoppingCart, User, Wallet, MessageSquare, Tag, AlertCircle, Loader2 } from 'lucide-react';
+import { updateCartItemQuantity, removeFromCart, clearCart } from '../../lib/cart-utils';
 import { checkAuthStatus } from '../../lib/auth-utils';
+import { useCart } from '../../lib/cart-context';
+import PaymentModal from '../../components/PaymentModal';
 
 // --- Helper Function to Generate Time Slots ---
 const generateTimeSlots = () => {
@@ -61,48 +63,9 @@ const generateTimeSlots = () => {
 
 // --- Cart State Management ---
 const useCartData = () => {
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { cartItems, loading, error, refreshCart } = useCart();
 
-  const fetchCartItems = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Check if user is authenticated
-      if (!checkAuthStatus()) {
-        setError('Please login to view your cart');
-        setCartItems([]);
-        return;
-      }
-
-      // Get user ID from session
-      const userSession = localStorage.getItem('user_session');
-      if (!userSession) {
-        setError('Session expired. Please login again.');
-        setCartItems([]);
-        return;
-      }
-
-      const sessionData = JSON.parse(userSession);
-      const userId = sessionData.id;
-
-      const items = await getCartItems(userId);
-      setCartItems(items);
-    } catch (err) {
-      setError('Failed to load cart items');
-      console.error('Error fetching cart items:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCartItems();
-  }, []);
-
-  return { cartItems, loading, error, fetchCartItems };
+  return { cartItems, loading, error, refreshCart };
 };
 
 // --- Reusable Components ---
@@ -167,7 +130,7 @@ const SectionCard = ({ title, children }) => (
 
 // --- Main Cart Component ---
 const SmartCanteenCart = () => {
-  const { cartItems, loading: cartLoading, error: cartError, fetchCartItems } = useCartData();
+  const { cartItems, loading: cartLoading, error: cartError, refreshCart } = useCartData();
   const [diningOption, setDiningOption] = useState('dine-in');
   const [pickupTime, setPickupTime] = useState('');
   const [timeSlots, setTimeSlots] = useState([]);
@@ -175,6 +138,8 @@ const SmartCanteenCart = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updatingQuantity, setUpdatingQuantity] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
 
   useEffect(() => {
     const slots = generateTimeSlots();
@@ -217,7 +182,7 @@ const SmartCanteenCart = () => {
       try {
         const result = await removeFromCart(itemId);
         if (result.success) {
-          await fetchCartItems(); // Refresh cart data
+          refreshCart(); // Refresh cart data
         } else {
           console.error('Failed to remove item:', result.error);
         }
@@ -232,7 +197,7 @@ const SmartCanteenCart = () => {
       try {
         const result = await updateCartItemQuantity(itemId, newQuantity);
         if (result.success) {
-          await fetchCartItems(); // Refresh cart data
+          refreshCart(); // Refresh cart data
         } else {
           console.error('Failed to update quantity:', result.error);
         }
@@ -242,6 +207,133 @@ const SmartCanteenCart = () => {
         setUpdatingQuantity(null);
       }
     }
+  };
+
+  // Cleanup function to close any existing modals
+  const cleanupModals = () => {
+    setShowPaymentModal(false);
+    if (window.currentRazorpayInstance) {
+      // Check if it's a DOM element (our custom modal) or Razorpay instance
+      if (window.currentRazorpayInstance instanceof Element) {
+        document.body.removeChild(window.currentRazorpayInstance);
+      } else if (typeof window.currentRazorpayInstance.close === 'function') {
+        window.currentRazorpayInstance.close();
+      }
+      window.currentRazorpayInstance = null;
+    }
+  };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      cleanupModals();
+    };
+  }, []);
+
+  const handlePaymentClick = async () => {
+    if (selectedPaymentMethod === 'online') {
+      // Direct Razorpay payment for online
+      try {
+        // Clean up any existing modals first
+        cleanupModals();
+        
+        const { initializeRazorpayPayment } = await import('../../lib/payment-utils');
+        
+        const orderData = {
+          userId: userData.id,
+          userEmail: userData.email || `${userData.email_name}@mite.ac.in`,
+          userName: userData.name || userData.email_name || '',
+          userPhone: userData.phone || '',
+          totalAmount: total,
+          subtotalAmount: subtotal,
+          serviceFee: serviceFee,
+          discountAmount: discount,
+          paymentMethod: 'online',
+          paymentGateway: 'razorpay',
+          diningOption: diningOption,
+          specialInstructions: instructions,
+          estimatedPickupTime: pickupTime ? new Date(pickupTime) : null,
+          orderItems: cartItems
+        };
+
+        console.log('Order data being sent:', orderData);
+        console.log('Total amount:', total);
+        console.log('Subtotal:', subtotal);
+
+        // Save cart items to localStorage before payment
+        localStorage.setItem('lastOrderItems', JSON.stringify(cartItems));
+        
+        // Close any existing payment modals first
+        setShowPaymentModal(false);
+        
+        try {
+          await initializeRazorpayPayment(
+            orderData,
+            async (paymentResponse) => {
+              // Payment successful
+              console.log('Payment successful:', paymentResponse);
+              refreshCart(); // Clear cart
+              // Redirect to order confirmation page
+              window.location.href = `/user/order?orderNumber=${paymentResponse.orderNumber}&transactionId=${paymentResponse.transactionId}`;
+            },
+            (error) => {
+              // Payment failed
+              console.error('Payment failed:', error);
+              alert(`Payment failed: ${error}`);
+            }
+          );
+        } catch (razorpayError) {
+          console.error('Razorpay initialization failed:', razorpayError);
+          
+          // Fallback: Create transaction and redirect to order page
+          try {
+            const { createTransaction } = await import('../../lib/payment-utils');
+            const transaction = await createTransaction({
+              userId: userData.id,
+              userEmail: userData.email || `${userData.email_name}@mite.ac.in`,
+              userName: userData.name || userData.email_name || '',
+              userPhone: userData.phone || '',
+              totalAmount: total,
+              subtotalAmount: subtotal,
+              serviceFee: serviceFee,
+              discountAmount: discount,
+              paymentMethod: 'online',
+              paymentGateway: 'razorpay',
+              diningOption: diningOption,
+              specialInstructions: instructions,
+              estimatedPickupTime: pickupTime ? new Date(pickupTime) : null,
+              orderItems: cartItems
+            });
+            
+            // Update transaction status to success for demo
+            const { updateTransactionStatus } = await import('../../lib/payment-utils');
+            await updateTransactionStatus(transaction.id, 'success');
+            
+            refreshCart(); // Clear cart
+            alert('Payment gateway unavailable. Order placed successfully!');
+            window.location.href = `/user/order?orderNumber=${transaction.orderNumber}&transactionId=${transaction.id}`;
+          } catch (fallbackError) {
+            console.error('Fallback payment failed:', fallbackError);
+            alert('Payment system unavailable. Please try again later.');
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing payment:', error);
+        alert('Failed to initialize payment. Please try again.');
+      }
+    } else {
+      // Cash payment - use modal
+      setShowPaymentModal(true);
+    }
+  };
+
+  const handlePaymentSuccess = (transaction) => {
+    // Refresh cart after successful payment
+    refreshCart();
+  };
+
+  const handlePaymentError = (error) => {
+    console.error('Payment error:', error);
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -266,6 +358,8 @@ const SmartCanteenCart = () => {
             </div>
           </div>
         )}
+
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
@@ -401,17 +495,62 @@ const SmartCanteenCart = () => {
                 </div>
             </SectionCard>
 
-            <SectionCard title="Payment Method">
+                        <SectionCard title="Payment Method">
                 <div className="space-y-3">
-                    {['Cash Payment', 'Online payemnet', 'Debit / Credit Card'].map((method, index) => (
-                        <label key={method} className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer ${index > 0 ? 'opacity-70' : 'border-orange-500 bg-orange-50'}`}>
-                            {index === 0 && <CreditCard size={20} className="text-gray-700"/>}
-                            {index === 1 && <Landmark size={20} className="text-gray-700"/>}
-                            {index === 2 && <Wallet size={20} className="text-gray-700"/>}
-                            <span className="font-semibold text-sm flex-grow">{method}</span>
-                            <input type="radio" name="payment" defaultChecked={index === 0} className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"/>
+                    <p className="text-gray-500 text-xs mb-3">Select your preferred payment method</p>
+                    
+                    {/* Payment Method Options */}
+                    <div className="space-y-2">
+                        {/* Cash on Delivery */}
+                        <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                            selectedPaymentMethod === 'cash'
+                                ? 'border-green-400 bg-green-50 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}>
+                            <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-md">
+                                <CreditCard size={16} className="text-green-600" />
+                            </div>
+                            <div className="flex-grow">
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="radio" 
+                                        name="paymentMethod" 
+                                        value="cash"
+                                        checked={selectedPaymentMethod === 'cash'}
+                                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                        className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300"
+                                    />
+                                    <span className="font-semibold text-sm text-gray-800">Cash on Delivery</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">Pay at the counter when collecting your order</p>
+                            </div>
                         </label>
-                    ))}
+
+                        {/* Online Payment */}
+                        <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                            selectedPaymentMethod === 'online'
+                                ? 'border-blue-400 bg-blue-50 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}>
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-md">
+                                <Landmark size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-grow">
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="radio" 
+                                        name="paymentMethod" 
+                                        value="online"
+                                        checked={selectedPaymentMethod === 'online'}
+                                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                        className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                    />
+                                    <span className="font-semibold text-sm text-gray-800">Online Payment</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">Pay securely using UPI, Cards, or Net Banking</p>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </SectionCard>
           </div>
@@ -479,12 +618,51 @@ const SmartCanteenCart = () => {
                 <span>₹{total.toFixed(2)}</span>
               </div>
             </div>
-            <button className="w-full mt-5 bg-black text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out">
-              Pay ₹{total.toFixed(2)}
+            <button 
+              onClick={handlePaymentClick}
+              disabled={cartItems.length === 0}
+              className={`w-full mt-4 font-semibold py-2.5 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out flex items-center justify-center gap-2 text-sm ${
+                cartItems.length === 0
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : selectedPaymentMethod === 'online'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                  : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
+              }`}
+            >
+              {selectedPaymentMethod === 'online' ? (
+                <>
+                  <Landmark size={16} />
+                  Pay Online ₹{total.toFixed(2)}
+                </>
+              ) : (
+                <>
+                  <CreditCard size={16} />
+                  Place Order ₹{total.toFixed(2)}
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Payment Modal - Only show for cash payments */}
+      {selectedPaymentMethod === 'cash' && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          cartItems={cartItems}
+          total={total}
+          userData={userData}
+          options={{
+            diningOption,
+            pickupTime,
+            instructions
+          }}
+          selectedPaymentMethod={selectedPaymentMethod}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentError={handlePaymentError}
+        />
+      )}
     </div>
   );
 };

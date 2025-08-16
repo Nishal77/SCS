@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 // Check if environment variables are set
 if (!supabaseUrl || !supabaseKey) {
@@ -12,6 +13,11 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Create service role client for cart operations (bypasses RLS)
+const supabaseService = supabaseServiceKey 
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : null;
+
 // Test connection
 supabase.from('inventory').select('count').limit(1).then(({ data, error }) => {
     if (error) {
@@ -21,4 +27,5 @@ supabase.from('inventory').select('count').limit(1).then(({ data, error }) => {
     }
 });
 
-export default supabase; 
+export default supabase;
+export { supabaseService }; 

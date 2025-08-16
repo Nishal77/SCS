@@ -3,6 +3,7 @@ import { Star, Plus, ArrowLeft, ArrowRight } from 'lucide-react';
 import { handleAddToCart } from '../../lib/auth-utils';
 import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getStockStatus } from '../../lib/image-utils';
 import supabase from '../../lib/supabase';
+import { useCart } from '../../lib/cart-context';
 
 // --- Real Data Hook with Real-time Updates ---
 const useTodaySpecialData = () => {
@@ -96,6 +97,7 @@ const useTodaySpecialData = () => {
 const FoodItemCard = ({ item }) => {
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
+    const { refreshCart } = useCart();
     
     const stockStatus = getStockStatus(item.stockAvailable);
     
@@ -109,17 +111,23 @@ const FoodItemCard = ({ item }) => {
             const result = await handleAddToCart(item.id, 1);
             if (result.success) {
                 setCartMessage('✅ Added to cart successfully!');
-                // Refresh page to get updated stock data
-                setTimeout(() => window.location.reload(), 1500);
+                // Refresh cart data globally
+                refreshCart();
+                // Clear message after 2 seconds
+                setTimeout(() => setCartMessage(''), 2000);
             } else {
                 setCartMessage(`❌ ${result.error}`);
                 if (result.error.includes('stock') || result.error.includes('Stock')) {
                     // Refresh page to get updated stock data
                     setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    // Clear error message after 3 seconds
+                    setTimeout(() => setCartMessage(''), 3000);
                 }
             }
         } catch (error) {
             setCartMessage('❌ Failed to add to cart');
+            setTimeout(() => setCartMessage(''), 3000);
         } finally {
             setAddingToCart(false);
         }

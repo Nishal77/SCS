@@ -6,6 +6,7 @@ import { formatProductForUser, isProductAvailable, formatPriceWithCurrency, getS
 import supabase from '../../lib/supabase';
 import FoodSymbol from '../../components/FoodSymbol';
 import { getCategoryFilterImage } from '../../lib/category-utils';
+import { useCart } from '../../lib/cart-context';
 
 // --- Real Data from Supabase with Real-time Updates ---
 const useInventoryData = () => {
@@ -149,6 +150,7 @@ const FilterBar = ({ activeFilter, setActiveFilter }) => {
 const RestaurantCard = ({ restaurant }) => {
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
+    const { refreshCart } = useCart();
     
     const stockStatus = getStockStatus(restaurant.stockAvailable);
     
@@ -162,17 +164,23 @@ const RestaurantCard = ({ restaurant }) => {
             const result = await handleAddToCart(restaurant.id, 1);
             if (result.success) {
                 setCartMessage('✅ Added to cart successfully!');
-                // Refresh page to get updated stock data
-                setTimeout(() => window.location.reload(), 1500);
+                // Refresh cart data globally
+                refreshCart();
+                // Clear message after 2 seconds
+                setTimeout(() => setCartMessage(''), 2000);
             } else {
                 setCartMessage(`❌ ${result.error}`);
                 if (result.error.includes('stock') || result.error.includes('Stock')) {
                     // Refresh page to get updated stock data
                     setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    // Clear error message after 3 seconds
+                    setTimeout(() => setCartMessage(''), 3000);
                 }
             }
         } catch (error) {
             setCartMessage('❌ Failed to add to cart');
+            setTimeout(() => setCartMessage(''), 3000);
         } finally {
             setAddingToCart(false);
         }

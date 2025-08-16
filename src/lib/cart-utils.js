@@ -1,7 +1,69 @@
-import supabase from './supabase';
+import supabase, { supabaseService } from './supabase';
 
 // Cart table name
 const CART_TABLE = 'user_cart';
+
+// Helper function to get the appropriate client
+const getClient = () => {
+    // Always use the regular client since RLS is disabled
+    return supabase;
+};
+
+// Debug function to test cart operations
+export const debugCartOperation = async (userId, productId) => {
+    try {
+        console.log('=== DEBUG CART OPERATION ===');
+        console.log('User ID:', userId);
+        console.log('Product ID:', productId);
+        
+        const client = getClient();
+        
+        // Test 1: Check if user exists in auth.users
+        console.log('Test 1: Checking user in auth.users...');
+        const { data: userData, error: userError } = await client
+            .from('auth.users')
+            .select('id, email')
+            .eq('id', userId)
+            .maybeSingle();
+        
+        console.log('User data:', userData);
+        console.log('User error:', userError);
+        
+        // Test 2: Check if product exists in inventory
+        console.log('Test 2: Checking product in inventory...');
+        const { data: productData, error: productError } = await client
+            .from('inventory')
+            .select('id, item_name, price')
+            .eq('id', productId)
+            .maybeSingle();
+        
+        console.log('Product data:', productData);
+        console.log('Product error:', productError);
+        
+        // Test 3: Check existing cart items
+        console.log('Test 3: Checking existing cart items...');
+        const { data: cartData, error: cartError } = await client
+            .from(CART_TABLE)
+            .select('*')
+            .eq('user_id', userId)
+            .eq('product_id', productId);
+        
+        console.log('Cart data:', cartData);
+        console.log('Cart error:', cartError);
+        
+        console.log('=== END DEBUG ===');
+        
+        return {
+            user: userData,
+            product: productData,
+            cart: cartData,
+            errors: { userError, productError, cartError }
+        };
+    } catch (error) {
+        console.error('Debug error:', error);
+        return { error };
+    }
+};
 
 // Initialize cart table if it doesn't exist
 export const initializeCartTable = async () => {
@@ -28,7 +90,9 @@ export const initializeCartTable = async () => {
 // Get cart items for a user
 export const getCartItems = async (userId) => {
     try {
-        const { data, error } = await supabase
+        const client = getClient();
+        
+        const { data, error } = await client
             .from(CART_TABLE)
             .select(`
                 *,
@@ -44,16 +108,19 @@ export const getCartItems = async (userId) => {
             `)
             .eq('user_id', userId);
         
-        if (error) throw error;
+        if (error) {
+            console.error('Error fetching cart items:', error);
+            throw error;
+        }
         
         return data.map(item => ({
             id: item.id,
             productId: item.product_id,
-            name: item.inventory?.item_name || 'Unknown Product',
+            name: item.item_name || item.inventory?.item_name || 'Unknown Product',
             description: item.inventory?.description || '',
-            price: item.inventory?.price || 0,
-            image: item.inventory?.image_url || '',
-            category: item.inventory?.category || '',
+            price: item.price || item.inventory?.price || 0,
+            image: item.image_url || item.inventory?.image_url || '',
+            category: item.category || item.inventory?.category || '',
             quantity: item.quantity,
             stockAvailable: item.inventory?.stock_available || 0
         }));
@@ -68,7 +135,7 @@ export const checkStockAvailability = async (productId, requestedQuantity = 1) =
     try {
         const { data, error } = await supabase
             .from('inventory')
-            .select('stock_available, item_name')
+            .select('stock_available, item_name, price, image_url, category')
             .eq('id', productId)
             .single();
         
@@ -82,7 +149,8 @@ export const checkStockAvailability = async (productId, requestedQuantity = 1) =
             stockAvailable: availableStock,
             canAdd: availableStock > 0,
             productName: productName,
-            requestedQuantity: requestedQuantity
+            requestedQuantity: requestedQuantity,
+            productData: data // Include full product data
         };
     } catch (error) {
         console.error('Error checking stock:', error);
@@ -91,7 +159,8 @@ export const checkStockAvailability = async (productId, requestedQuantity = 1) =
             stockAvailable: 0,
             canAdd: false,
             productName: 'Unknown Product',
-            requestedQuantity: requestedQuantity
+            requestedQuantity: requestedQuantity,
+            productData: null
         };
     }
 };
@@ -99,8 +168,12 @@ export const checkStockAvailability = async (productId, requestedQuantity = 1) =
 // Add item to cart with stock validation
 export const addToCart = async (userId, productId, quantity = 1) => {
     try {
-        // First check stock availability
+        console.log('=== ADD TO CART START ===');
+        console.log('Parameters:', { userId, productId, quantity });
+        
+        // First check stock availability and get product details
         const stockCheck = await checkStockAvailability(productId, quantity);
+        console.log('Stock check result:', stockCheck);
         
         if (!stockCheck.canAdd) {
             return {
@@ -119,20 +192,35 @@ export const addToCart = async (userId, productId, quantity = 1) => {
         }
         
         // Check if item already exists in cart
-        const { data: existingItem, error: checkError } = await supabase
+        const client = getClient();
+        
+        console.log('Checking for existing cart item:', { userId, productId });
+        
+        const { data: existingItem, error: checkError } = await client
             .from(CART_TABLE)
             .select('id, quantity')
             .eq('user_id', userId)
             .eq('product_id', productId)
-            .single();
+            .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors
         
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        if (checkError) {
+            console.error('Error checking existing cart item:', checkError);
+            console.error('Error details:', {
+                code: checkError.code,
+                message: checkError.message,
+                details: checkError.details,
+                hint: checkError.hint
+            });
             throw checkError;
         }
+        
+        console.log('Existing cart item:', existingItem);
         
         if (existingItem) {
             // Update existing item quantity
             const newQuantity = existingItem.quantity + quantity;
+            
+            console.log('Updating existing cart item:', { itemId: existingItem.id, newQuantity });
             
             // Check if new total quantity exceeds stock
             if (newQuantity > stockCheck.stockAvailable) {
@@ -143,12 +231,27 @@ export const addToCart = async (userId, productId, quantity = 1) => {
                 };
             }
             
-            const { error: updateError } = await supabase
+            const client = getClient();
+            
+            const { data: updatedItem, error: updateError } = await client
                 .from(CART_TABLE)
                 .update({ quantity: newQuantity })
-                .eq('id', existingItem.id);
+                .eq('id', existingItem.id)
+                .select()
+                .single();
             
-            if (updateError) throw updateError;
+            if (updateError) {
+                console.error('Error updating cart item:', updateError);
+                console.error('Update error details:', {
+                    code: updateError.code,
+                    message: updateError.message,
+                    details: updateError.details,
+                    hint: updateError.hint
+                });
+                throw updateError;
+            }
+            
+            console.log('Successfully updated cart item:', updatedItem);
             
             return {
                 success: true,
@@ -156,16 +259,39 @@ export const addToCart = async (userId, productId, quantity = 1) => {
                 stockAvailable: stockCheck.stockAvailable
             };
         } else {
-            // Add new item to cart
-            const { error: insertError } = await supabase
-                .from(CART_TABLE)
-                .insert({
-                    user_id: userId,
-                    product_id: productId,
-                    quantity: quantity
-                });
+            // Add new item to cart with product details
+            const client = getClient();
             
-            if (insertError) throw insertError;
+            const cartItemData = {
+                user_id: userId,
+                product_id: productId,
+                quantity: quantity,
+                price: stockCheck.productData.price,
+                image_url: stockCheck.productData.image_url,
+                item_name: stockCheck.productData.item_name,
+                category: stockCheck.productData.category
+            };
+            
+            console.log('Inserting new cart item:', cartItemData);
+            
+            const { data: insertedItem, error: insertError } = await client
+                .from(CART_TABLE)
+                .insert(cartItemData)
+                .select()
+                .single();
+            
+            if (insertError) {
+                console.error('Error inserting cart item:', insertError);
+                console.error('Insert error details:', {
+                    code: insertError.code,
+                    message: insertError.message,
+                    details: insertError.details,
+                    hint: insertError.hint
+                });
+                throw insertError;
+            }
+            
+            console.log('Successfully inserted cart item:', insertedItem);
             
             return {
                 success: true,
@@ -174,7 +300,14 @@ export const addToCart = async (userId, productId, quantity = 1) => {
             };
         }
     } catch (error) {
+        console.error('=== ADD TO CART ERROR ===');
         console.error('Error adding to cart:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+        });
         return {
             success: false,
             error: 'Failed to add item to cart. Please try again.',
@@ -202,7 +335,9 @@ export const updateCartItemQuantity = async (cartItemId, newQuantity) => {
         }
         
         // Get the product to check stock
-        const { data: cartItem, error: fetchError } = await supabase
+        const client = getClient();
+        
+        const { data: cartItem, error: fetchError } = await client
             .from(CART_TABLE)
             .select('product_id')
             .eq('id', cartItemId)
@@ -222,7 +357,7 @@ export const updateCartItemQuantity = async (cartItemId, newQuantity) => {
         }
         
         // Update quantity
-        const { error: updateError } = await supabase
+        const { error: updateError } = await client
             .from(CART_TABLE)
             .update({ quantity: newQuantity })
             .eq('id', cartItemId);
@@ -246,7 +381,9 @@ export const updateCartItemQuantity = async (cartItemId, newQuantity) => {
 // Remove item from cart
 export const removeFromCart = async (cartItemId) => {
     try {
-        const { error } = await supabase
+        const client = getClient();
+        
+        const { error } = await client
             .from(CART_TABLE)
             .delete()
             .eq('id', cartItemId);
@@ -269,7 +406,9 @@ export const removeFromCart = async (cartItemId) => {
 // Clear entire cart for a user
 export const clearCart = async (userId) => {
     try {
-        const { error } = await supabase
+        const client = getClient();
+        
+        const { error } = await client
             .from(CART_TABLE)
             .delete()
             .eq('user_id', userId);
@@ -318,7 +457,9 @@ export const subscribeToStockUpdates = (productIds, callback) => {
 // Get cart count for a user
 export const getCartCount = async (userId) => {
     try {
-        const { count, error } = await supabase
+        const client = getClient();
+        
+        const { count, error } = await client
             .from(CART_TABLE)
             .select('*', { count: 'exact', head: true })
             .eq('user_id', userId);
