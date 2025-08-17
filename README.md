@@ -1,4 +1,4 @@
-# Smart Canteen Management Platform (CMS)
+# Smart Canteen Platform (CMS)
 
 An open-source, full-stack web platform built to streamline and digitize canteen operations from **real-time inventory tracking** and **order handling** to a responsive, role-based staff dashboard.
 
