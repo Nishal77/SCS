@@ -37,7 +37,7 @@ const Mitelive = () => {
           <div 
             className="relative w-full h-full bg-cover bg-center bg-no-repeat p-6 flex flex-col justify-between"
             style={{
-              backgroundImage: `url('/livecount.JPG')`,
+              backgroundImage: `url('/MITE.PNG')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}

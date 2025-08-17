@@ -7,6 +7,26 @@ import { useCart } from '../../lib/cart-context';
 
 import { generateAvatarFromEmail, generateInitials, getDisplayName, getDisplayEmail } from '../../lib/avatar-utils';
 
+// Custom CSS for profile images with yellow border
+const profileImageStyles = `
+  .profile-avatar {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .profile-avatar img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+  }
+  
+  .profile-avatar .avatar-fallback {
+    display: none;
+  }
+  
+`;
+
 
 
 // Profile Dropdown Component
@@ -30,17 +50,21 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
   // Get display information from user session
   const displayName = getDisplayName(userSession);
   const displayEmail = getDisplayEmail(userSession);
-  const avatarUrl = '/profile.JPG';
-  const initials = generateInitials(displayEmail, displayName);
+          const avatarUrl = '/profile1.jpeg';
+        const initials = generateInitials(displayEmail, displayName);
 
   return (
     <div className="relative profile-dropdown">
       <button
         onClick={toggleDropdown}
-        className="flex items-center gap-3 p-2 rounded-full hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+        className="flex items-center gap-3 p-2 rounded-full"
       >
-        <Avatar className="w-10 h-10 border-2 border-gray-200 hover:border-amber-400 transition-colors">
-          <AvatarImage src={avatarUrl} alt={displayName} />
+        <Avatar className="w-10 h-10 border-2 border-black/30 overflow-hidden profile-avatar">
+          <AvatarImage 
+            src={avatarUrl} 
+            alt={displayName}
+            className="object-cover w-full h-full"
+          />
           <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-lg">
             {initials}
           </AvatarFallback>
@@ -53,8 +77,12 @@ const ProfileDropdown = ({ userSession, onLogout, isLoggingOut }) => {
           {/* User Info Section */}
           <div className="px-4 py-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <Avatar className="w-12 h-12 border-2 border-amber-200">
-                <AvatarImage src="/profile.JPG" alt={displayName} />
+              <Avatar className="w-12 h-12 border-2 border-amber-400 overflow-hidden profile-avatar">
+                <AvatarImage 
+                  src="/profile1.jpeg" 
+                  alt={displayName}
+                  className="object-cover w-full h-full"
+                />
                 <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-xl">
                   {initials}
                 </AvatarFallback>
@@ -129,6 +157,19 @@ const Header = () => {
     const [userSession, setUserSession] = useState(null);
     const navigate = useNavigate();
     const { cartCount } = useCart();
+
+    // Add CSS to document head for perfect profile images
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = profileImageStyles;
+        document.head.appendChild(style);
+        
+        return () => {
+            if (document.head.contains(style)) {
+                document.head.removeChild(style);
+            }
+        };
+    }, []);
 
     // Get user session data
     useEffect(() => {
@@ -334,13 +375,6 @@ const Header = () => {
                 <span className="text-sm text-gray-600 font-medium">
                     {loading ? 'Getting location...' : address || 'MITE Campus'}
                 </span>
-                <button
-                    onClick={getLocation}
-                    disabled={loading}
-                    className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-3 h-3 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-                </button>
             </div>
         );
     };
@@ -350,17 +384,21 @@ const Header = () => {
         // Get display information from user session
         const displayName = getDisplayName(userSession);
         const displayEmail = getDisplayEmail(userSession);
-        const avatarUrl = generateAvatarFromEmail(displayEmail, 200, 'avataaars');
+        const avatarUrl = '/profile.JPG';
         const initials = generateInitials(displayEmail, displayName);
 
         return (
             <div className="flex items-center gap-2">
-                <Avatar className="w-8 h-8 border-2 border-gray-200">
-                    <AvatarImage src={avatarUrl} alt={displayName} />
-                    <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-sm">
-                        {initials}
-                    </AvatarFallback>
-                </Avatar>
+                            <Avatar className="w-8 h-8 border-2 border-amber-400 overflow-hidden profile-avatar">
+                <AvatarImage 
+                    src={avatarUrl} 
+                    alt={displayName}
+                    className="object-cover w-full h-full"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold text-sm">
+                    {initials}
+                </AvatarFallback>
+            </Avatar>
                 {!compact && (
                     <span className="text-sm font-medium text-gray-700">
                         {displayName}
@@ -418,10 +456,10 @@ const Header = () => {
                         <Link to="/user/contact" className="text-gray-800 font-semibold hover:text-amber-500 transition-colors">Contact</Link>
                     </div>
                     
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center justify-end gap-1">
                         {userSession ? (
                             <>
-                                <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 transition-colors">
+                                <Link to="/user/cart" className="relative text-gray-600 hover:text-orange-500 transition-colors mr-2">
                                     <ShoppingCart className="w-6 h-6" />
                                     {cartCount > 0 && (
                                         <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
@@ -430,7 +468,7 @@ const Header = () => {
                                     )}
                                 </Link>
                                 
-                                <Link to="/user/orders" className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white font-bold rounded-full text-sm shadow-md hover:bg-gray-800 transform hover:scale-105 transition-all duration-300">
+                                <Link to="/user/orders" className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm shadow-md hover:bg-gray-800 transform  duration-300">
                                     <Truck className="w-5 h-5" />
                                     <span>Orders</span>
                                 </Link>

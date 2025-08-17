@@ -40,7 +40,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="text-gray-800  relative overflow-hidden px-4 md:px-6">
+    <footer className="text-gray-800 relative overflow-hidden px-4 md:px-6 bg-white z-10">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-10 border-t border-gray-200/80 py-12 ">
           {/* Left Section: Branding and Info */}
@@ -81,9 +81,21 @@ const Footer = () => {
           </div>
         </div>
         
-        {/* "Wow" Text Section */}
+        {/* "Wow" Text Section with Background Image */}
         <div className="w-full flex mt-16 mb-8 items-center justify-center">
-          <h1 className="text-center text-7xl md:text-9xl lg:text-[12rem] xl:text-[16rem] font-black bg-clip-text text-transparent bg-gradient-to-b from-gray-100 to-gray-300 select-none tracking-tighter leading-none">
+          <h1 
+            className="text-center text-7xl md:text-9xl lg:text-[12rem] xl:text-[16rem] font-black select-none tracking-tighter leading-none"
+            style={{
+              backgroundImage: `url('/livecount.JPG')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              color: 'transparent'
+            }}
+          >
             MITE EATS
           </h1>
         </div>
@@ -103,11 +115,4 @@ const Footer = () => {
 };
 
 
-// Main App component to render the Footer
-export default function App() {
-    return (
-        <div className="">
-            <Footer />
-        </div>
-    );
-}
+export default Footer;

@@ -32,6 +32,19 @@ export const createTransaction = async (transactionData) => {
       throw new Error('User email is required');
     }
     
+    // Format cart items for storage
+    let formattedItems = [];
+    if (transactionData.orderItems && transactionData.orderItems.length > 0) {
+      formattedItems = transactionData.orderItems.map(item => ({
+        name: item.name || item.item_name || 'Unknown Item',
+        quantity: item.quantity || 1,
+        price: parseFloat(item.price) || 0.00,
+        image_url: item.image || item.image_url || null,
+        category: item.category || 'General',
+        special_instructions: item.special_instructions || item.note || null
+      }));
+    }
+    
     // Include all required fields from the comprehensive transactions table
     const transactionRecord = {
       user_id: transactionData.userId,
@@ -49,7 +62,8 @@ export const createTransaction = async (transactionData) => {
       order_status: 'Pending',
       dining_option: transactionData.diningOption || 'takeaway',
       special_instructions: transactionData.specialInstructions || '',
-      estimated_pickup_time: transactionData.estimatedPickupTime || null
+      estimated_pickup_time: transactionData.estimatedPickupTime || null,
+      items: formattedItems // Store items as JSONB
     };
 
     console.log('Creating transaction with data:', transactionRecord);
@@ -57,6 +71,7 @@ export const createTransaction = async (transactionData) => {
     console.log('User ID type:', typeof transactionData.userId);
     console.log('Order status being sent:', transactionRecord.order_status);
     console.log('Order status type:', typeof transactionRecord.order_status);
+    console.log('Items being stored:', formattedItems);
     
     const { data, error } = await supabase
       .from('transactions')
@@ -66,7 +81,36 @@ export const createTransaction = async (transactionData) => {
 
     if (error) throw error;
     
-    // Store order items in localStorage for now (since order_items table might not exist)
+    // Create order_items records for detailed tracking
+    if (formattedItems.length > 0) {
+      try {
+        const orderItemsData = formattedItems.map(item => ({
+          transaction_id: data.id,
+          item_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image_url: item.image_url,
+          category: item.category,
+          special_instructions: item.special_instructions
+        }));
+        
+        const { error: orderItemsError } = await supabase
+          .from('order_items')
+          .insert(orderItemsData);
+        
+        if (orderItemsError) {
+          console.warn('Warning: Could not create order_items records:', orderItemsError);
+          console.log('Items are still stored in transactions.items column');
+        } else {
+          console.log(`✅ Created ${orderItemsData.length} order_items records`);
+        }
+      } catch (orderItemsError) {
+        console.warn('Warning: Could not create order_items records:', orderItemsError);
+        console.log('Items are still stored in transactions.items column');
+      }
+    }
+
+    // Store order items in localStorage as backup (for development/testing)
     if (transactionData.orderItems && transactionData.orderItems.length > 0) {
       localStorage.setItem(`orderItems_${data.id}`, JSON.stringify(transactionData.orderItems));
     }

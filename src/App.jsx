@@ -8,6 +8,7 @@ import Cart from './pages/user/cart.jsx'
 import Order from './pages/user/order.jsx'
 import Orders from './pages/user/orders.jsx'
 import Profile from './pages/user/profile.jsx'
+import ViewHistory from './pages/user/ViewHistory.jsx'
 import Login from './pages/auth/Login.jsx'
 import { CartProvider } from './lib/cart-context'
 
@@ -88,6 +89,11 @@ function App() {
           <Route path="/user/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/user/view-history" element={
+            <ProtectedRoute>
+              <ViewHistory />
             </ProtectedRoute>
           } />
           <Route path="/auth/login" element={<Login />} />

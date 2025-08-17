@@ -27,6 +27,23 @@ import { getUserTransactions } from '../../lib/payment-utils';
 import { safeParseDate, formatTime, calculateFutureTime } from '../../lib/utils';
 import supabase from '../../lib/supabase';
 
+/**
+ * UserOrdersPage Component
+ * 
+ * Features:
+ * - Shows only today's orders (refreshes daily at midnight)
+ * - Daily refresh system that clears current orders ONLY after 12:00 AM (00:00)
+ * - Prevents refresh during the same day before midnight
+ * - View History preserves all historical records
+ * - Real-time updates for current day orders only
+ * - Manual refresh capability for current day
+ * 
+ * Time Logic:
+ * - 11:59 PM → Same day, show current orders
+ * - 12:00 AM (00:00) → New day, clear orders, show "new day" state
+ * - 12:01 AM → Still new day, maintain "new day" state
+ * - 1:00 AM+ → Reset "new day" state, allow normal operation
+ */
 const UserOrdersPage = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
@@ -37,6 +54,8 @@ const UserOrdersPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting'); // 'connecting', 'connected', 'polling'
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isNewDay, setIsNewDay] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,13 +83,59 @@ const UserOrdersPage = () => {
     fetchData();
   }, [navigate]);
 
+  // Daily refresh logic - check if it's a new day (only after 12:00 AM)
+  useEffect(() => {
+    const checkNewDay = () => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      // Only proceed with refresh logic after 12:00 AM (00:00)
+      // This ensures we don't refresh during the same day before midnight
+      if (currentHour === 0 && currentMinute === 0) {
+        const today = now.toDateString();
+        const storedDate = localStorage.getItem('last_orders_date');
+        
+        if (storedDate !== today) {
+          console.log('🔄 New day detected at midnight! Clearing current orders...');
+          setIsNewDay(true);
+          setOrders([]); // Clear current orders
+          localStorage.setItem('last_orders_date', today);
+          
+          // Show notification about daily refresh
+          showNotification('📅 Orders refreshed for the new day!', 'info');
+        }
+      } else {
+        // If it's not midnight, ensure we're not in "new day" state
+        // This handles cases where user visits the page after midnight but before the next check
+        const today = now.toDateString();
+        const storedDate = localStorage.getItem('last_orders_date');
+        
+        if (storedDate === today && isNewDay) {
+          console.log('🔄 Resetting new day state - same day detected');
+          setIsNewDay(false);
+        }
+      }
+      
+      setCurrentDate(now);
+    };
+
+    // Check immediately
+    checkNewDay();
+    
+    // Set up interval to check every minute
+    const interval = setInterval(checkNewDay, 60000);
+    
+    return () => clearInterval(interval);
+  }, [isNewDay]);
+
   // Separate useEffect to fetch orders when userData is available
   useEffect(() => {
-    if (userData && userData.id) {
+    if (userData && userData.id && !isNewDay) {
       console.log('User data available, fetching orders for:', userData.id);
       fetchUserOrders(userData.id);
     }
-  }, [userData]);
+  }, [userData, isNewDay]);
 
   // Set up real-time subscription for order updates
   useEffect(() => {
@@ -127,13 +192,17 @@ const UserOrdersPage = () => {
                 console.log('ℹ️ Update detected but no status change, skipping UI update');
               }
             } else if (payload.eventType === 'INSERT') {
-              // For new orders, refresh to show them
+              // For new orders, refresh to show them (only if it's today's order)
               console.log('🆕 New order detected, refreshing orders...');
-              fetchUserOrders(userData.id);
+              if (!isNewDay) {
+                fetchUserOrders(userData.id);
+              }
             } else if (payload.eventType === 'DELETE') {
-              // For deletions, refresh to remove them
+              // For deletions, refresh to remove them (only if it's today's order)
               console.log('🗑️ Order deleted, refreshing orders...');
-              fetchUserOrders(userData.id);
+              if (!isNewDay) {
+                fetchUserOrders(userData.id);
+              }
             }
           }
         )
@@ -188,8 +257,21 @@ const UserOrdersPage = () => {
         console.log('Fetched', transactions.length, 'transactions for user');
       }
       
+      // Get today's date for filtering
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      // Filter transactions to only show today's orders
+      const todaysTransactions = transactions.filter(transaction => {
+        const transactionDate = safeParseDate(transaction.created_at);
+        return transactionDate >= todayStart && transactionDate < todayEnd;
+      });
+      
+      console.log(`Filtered to ${todaysTransactions.length} orders from today out of ${transactions.length} total transactions`);
+      
       // Transform transactions to orders with proper formatting
-      const formattedOrders = transactions.map(transaction => {
+      const formattedOrders = todaysTransactions.map(transaction => {
         // Get order items from localStorage
         let orderItems = [];
         try {
@@ -306,6 +388,26 @@ const UserOrdersPage = () => {
     }, 5000);
   };
 
+  // Check if we should show new day state based on current time
+  const shouldShowNewDayState = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Only show new day state if it's after midnight (00:00) and before 1:00 AM
+    // This prevents showing "new day" state during the same day before midnight
+    return currentHour === 0 && isNewDay;
+  };
+
+  // Manual refresh function for current day orders
+  const refreshCurrentDayOrders = () => {
+    if (userData && userData.id) {
+      console.log('🔄 Manually refreshing current day orders...');
+      setIsNewDay(false); // Reset new day flag
+      fetchUserOrders(userData.id);
+      showNotification('🔄 Orders refreshed for today!', 'success');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -410,21 +512,51 @@ const UserOrdersPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white mt-8">
       <Header />
       <main className="pt-24 pb-8">
         <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
+          {/* Header - Compact */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/user/cart')}
+                className="p-2 rounded-full bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
+              >
+                <ArrowLeft size={18} className="text-gray-700" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+                <p className="text-xs text-gray-600 mt-0.5">Track all your canteen orders</p>
+              </div>
+            </div>
+            
+            {/* View History Button */}
             <button
-              onClick={() => navigate('/user/cart')}
-              className="p-3 rounded-full bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
+              onClick={() => navigate('/user/view-history')}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition-all duration-300 shadow-md hover:shadow-lg text-sm"
             >
-              <ArrowLeft size={20} className="text-gray-700" />
+              <Calendar className="w-4 h-4" />
+              View History
             </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-              <p className="text-sm text-gray-600 mt-1">Track all your canteen orders</p>
+            
+            {/* Daily Refresh Indicator */}
+            <div className="text-xs text-gray-500 text-center">
+              <div className="flex items-center gap-1 justify-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Refreshed: {currentDate.toLocaleDateString()}</span>
+              </div>
+              {shouldShowNewDayState() && (
+                <div className="text-amber-600 font-medium mt-1">
+                  ✨ New Day Started
+                </div>
+              )}
+              <button
+                onClick={refreshCurrentDayOrders}
+                className="mt-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md text-xs transition-colors"
+              >
+                🔄 Refresh Today
+              </button>
             </div>
           </div>
 
@@ -434,85 +566,80 @@ const UserOrdersPage = () => {
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <ShoppingBag className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">No Orders Yet</h3>
-              <p className="text-gray-600 mb-8">Start by placing your first order from our delicious menu!</p>
-              <button
-                onClick={() => navigate('/user/cart')}
-                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
-              >
-                Order Now
-              </button>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                {shouldShowNewDayState() ? 'No Orders for Today' : 'No Orders Yet'}
+              </h3>
+              <p className="text-gray-600 mb-8">
+                {shouldShowNewDayState() 
+                  ? 'Orders are refreshed daily at midnight. Check View History for past orders!'
+                  : 'Start by placing your first order from our delicious menu!'
+                }
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => navigate('/user/cart')}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
+                >
+                  Order Now
+                </button>
+                {shouldShowNewDayState() && (
+                  <button
+                    onClick={() => navigate('/user/view-history')}
+                    className="bg-amber-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-600 hover:shadow-lg transition-all duration-300"
+                  >
+                    View History
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {orders.map((order) => (
-                <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                  {/* Order Header */}
-                  <div className="p-6 border-b border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-100 rounded-xl">
-                          <Package className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">Order #{order.orderNumber}</h3>
-                          <p className="text-sm text-gray-500">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => openOrderDetails(order)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
 
-                  {/* Order Details - Two Column Layout */}
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Order Details - Compact Layout */}
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                       {/* Left Column - Order Success + Menu (8/12 width) */}
-                      <div className="lg:col-span-8 space-y-4">
-                        {/* Order Success Section - Green Gradient */}
-                        <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-6 text-white">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                              <CheckCircle className="w-6 h-6 text-white" />
+                      <div className="lg:col-span-8 space-y-3">
+                        {/* Order Success Section - Compact */}
+                        <div className="rounded-lg p-3 text-black border border-gray-200 bg-white">
+                          <div className="flex items-center gap-2 mb-2 border border-green-600 bg-green-600 rounded-md p-1.5">
+                            <div className="w-6 h-6 bg-green-700 rounded-full flex items-center justify-center">
+                              <CheckCircle className="w-3 h-3 text-white" />
                             </div>
                             <div>
-                              <h3 className="text-xl font-bold">Order Successful!</h3>
-                              <p className="text-green-100 text-sm">Your order has been confirmed</p>
+                              <h3 className="text-base text-white font-bold">Order Successful!</h3>
+                              <p className="text-white text-xs">Your order has been confirmed</p>
                             </div>
                           </div>
                           
-                          <div className="space-y-3">
+                          <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
-                              <span className="text-green-100 text-sm">Order ID:</span>
-                              <span className="font-bold text-lg">#{order.orderNumber}</span>
+                              <span className="text-black text-xs">Order ID:</span>
+                              <span className="font-bold text-sm">#{order.orderNumber}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-green-100 text-sm">Total Amount:</span>
-                              <span className="font-bold text-2xl">₹{order.total.toFixed(2)}</span>
+                              <span className="text-black text-xs">Total Amount:</span>
+                              <span className="font-bold text-lg">₹{order.total.toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
 
-                        {/* Order Status Progress Section - Horizontal */}
-                        <div className="bg-white border border-gray-200 rounded-xl p-6">
-                          <h4 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-gray-600" />
+                        {/* Order Status Progress Section - Compact */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-3">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-xs">
+                            <Clock className="w-3 h-3 text-gray-600" />
                             Order Status
                           </h4>
                           
                           {/* Horizontal Progress Bar */}
                           <div className="relative">
                             {/* Progress Line */}
-                            <div className="absolute top-6 left-8 right-8 h-0.5 bg-gray-200"></div>
+                            <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200"></div>
                             
                             {/* Progress Fill */}
-                            <div className={`absolute top-6 left-8 h-0.5 bg-green-500 transition-all duration-1000 ease-out ${
+                            <div className={`absolute top-4 left-6 h-0.5 bg-green-500 transition-all duration-1000 ease-out ${
                               order.orderStatus === 'Pending' ? 'w-0' :
                               order.orderStatus === 'Accepted' ? 'w-1/4' :
                               order.orderStatus === 'Cooking' ? 'w-2/4' :
@@ -524,15 +651,15 @@ const UserOrdersPage = () => {
                             <div className="flex justify-between relative">
                               {/* Order Placed */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${
                                   ['Pending', 'Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                     ? 'bg-green-500 text-white shadow-lg scale-110'
                                     : 'bg-gray-300 text-gray-600'
                                 }`}>
-                                  <Package className="w-6 h-6" />
+                                  <Package className="w-4 h-4" />
                                 </div>
                                 <div className="text-center">
-                                  <h5 className={`font-semibold text-sm mb-1 ${
+                                  <h5 className={`font-semibold text-xs mb-0.5 ${
                                     ['Pending', 'Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                       ? 'text-green-700'
                                       : 'text-gray-600'
@@ -540,23 +667,23 @@ const UserOrdersPage = () => {
                                   <p className="text-xs text-gray-500">Received</p>
                                 </div>
                                 {['Pending', 'Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus) && (
-                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-2 h-2 text-white" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Accepted */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${
                                   ['Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                     ? 'bg-green-500 text-white shadow-lg scale-110'
                                     : 'bg-gray-300 text-gray-600'
                                 }`}>
-                                  <CheckCircle className="w-6 h-6" />
+                                  <CheckCircle className="w-4 h-4" />
                                 </div>
                                 <div className="text-center">
-                                  <h5 className={`font-semibold text-sm mb-1 ${
+                                  <h5 className={`font-semibold text-xs mb-0.5 ${
                                     ['Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                       ? 'text-green-700'
                                       : 'text-gray-600'
@@ -564,23 +691,23 @@ const UserOrdersPage = () => {
                                   <p className="text-xs text-gray-500">Confirmed</p>
                                 </div>
                                 {['Accepted', 'Cooking', 'Ready', 'Delivered'].includes(order.orderStatus) && (
-                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-2 h-2 text-white" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Cooking */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${
                                   ['Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                     ? 'bg-green-500 text-white shadow-lg scale-110'
                                     : 'bg-gray-300 text-gray-600'
                                 }`}>
-                                  <ChefHat className="w-6 h-6" />
+                                  <ChefHat className="w-4 h-4" />
                                 </div>
                                 <div className="text-center">
-                                  <h5 className={`font-semibold text-sm mb-1 ${
+                                  <h5 className={`font-semibold text-xs mb-0.5 ${
                                     ['Cooking', 'Ready', 'Delivered'].includes(order.orderStatus)
                                       ? 'text-green-700'
                                       : 'text-gray-600'
@@ -588,23 +715,23 @@ const UserOrdersPage = () => {
                                   <p className="text-xs text-gray-500">Preparing</p>
                                 </div>
                                 {['Cooking', 'Ready', 'Delivered'].includes(order.orderStatus) && (
-                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-2 h-2 text-white" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Order Ready */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${
                                   ['Ready', 'Delivered'].includes(order.orderStatus)
                                     ? 'bg-green-500 text-white shadow-lg scale-110'
                                     : 'bg-gray-300 text-gray-600'
                                 }`}>
-                                  <Bell className="w-6 h-6" />
+                                  <Bell className="w-4 h-4" />
                                 </div>
                                 <div className="text-center">
-                                  <h5 className={`font-semibold text-sm mb-1 ${
+                                  <h5 className={`font-semibold text-xs mb-0.5 ${
                                     ['Ready', 'Delivered'].includes(order.orderStatus)
                                       ? 'text-green-700'
                                       : 'text-gray-600'
@@ -612,23 +739,23 @@ const UserOrdersPage = () => {
                                   <p className="text-xs text-gray-500">Pickup</p>
                                 </div>
                                 {['Ready', 'Delivered'].includes(order.orderStatus) && (
-                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-2 h-2 text-white" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Delivered */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${
                                   order.orderStatus === 'Delivered'
                                     ? 'bg-green-500 text-white shadow-lg scale-110'
                                     : 'bg-gray-300 text-gray-600'
                                 }`}>
-                                  <Truck className="w-6 h-6" />
+                                  <Truck className="w-4 h-4" />
                                 </div>
                                 <div className="text-center">
-                                  <h5 className={`font-semibold text-sm mb-1 ${
+                                  <h5 className={`font-semibold text-xs mb-0.5 ${
                                     order.orderStatus === 'Delivered'
                                       ? 'text-green-700'
                                       : 'text-gray-600'
@@ -636,8 +763,8 @@ const UserOrdersPage = () => {
                                   <p className="text-xs text-gray-500">Completed</p>
                                 </div>
                                 {order.orderStatus === 'Delivered' && (
-                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-2 h-2 text-white" />
                                   </div>
                                 )}
                               </div>
@@ -645,26 +772,26 @@ const UserOrdersPage = () => {
                           </div>
                         </div>
 
-                        {/* Menu Section */}
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <ShoppingBag className="w-5 h-5 text-gray-600" />
+                        {/* Menu Section - Compact */}
+                        <div className="bg-white border border-gray-200 rounded-xl p-3">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+                            <ShoppingBag className="w-4 h-4 text-gray-600" />
                             Menu Items
                           </h4>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {order.items.map((item, index) => (
-                              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                                 <img 
-                                  src={item.image || "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=50&h=50&fit=crop&crop=center"} 
+                                  src={item.image || "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=40&h=40&fit=crop&crop=center"} 
                                   alt={item.name} 
-                                  className="w-12 h-12 rounded-lg object-cover"
+                                  className="w-10 h-10 rounded-lg object-cover"
                                 />
                                 <div className="flex-grow">
-                                  <h5 className="font-semibold text-gray-900 text-sm">{item.name}</h5>
-                                  <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
+                                  <h5 className="font-semibold text-gray-900 text-xs">{item.name}</h5>
+                                  <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-bold text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                  <p className="font-bold text-gray-900 text-sm">₹{(item.price * item.quantity).toFixed(2)}</p>
                                 </div>
                               </div>
                             ))}
@@ -673,69 +800,69 @@ const UserOrdersPage = () => {
                       </div>
 
                       {/* Right Column - OTP/Token + Amount (4/12 width) */}
-                      <div className="lg:col-span-4 space-y-4">
-                        {/* OTP & Token Section - Top Right */}
+                      <div className="lg:col-span-4 space-y-3">
+                        {/* OTP & Token Section - Compact Black & White Theme */}
                         {order.otp && (
-                          <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <CreditCard className="w-5 h-5 text-blue-600" />
+                          <div className="bg-white border border-gray-200 rounded-lg p-2">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-xs">
+                              <CreditCard className="w-3 h-3 text-gray-600" />
                               Collection Details
                             </h4>
-                            <div className="space-y-4">
-                              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                <p className="text-xs text-blue-600 mb-1">OTP Code</p>
-                                <p className="text-2xl font-bold text-blue-900 font-mono">#{order.otp}</p>
-                                <p className="text-xs text-blue-500 mt-1">Show this to staff</p>
+                            <div className="space-y-2">
+                              <div className="text-center p-2 bg-black rounded-md">
+                                <p className="text-xs text-white mb-0.5 opacity-80">OTP Code</p>
+                                <p className="text-lg font-bold text-white font-mono">#{order.otp}</p>
+                                <p className="text-xs text-white opacity-70">Show this to staff</p>
                               </div>
-                              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                                <p className="text-xs text-orange-600 mb-1">Token Number</p>
-                                <p className="text-2xl font-bold text-orange-900 font-mono">#tok-{order.tokenNumber}</p>
-                                <p className="text-xs text-orange-500 mt-1">Collection number</p>
+                              <div className="text-center p-2 bg-white border border-black rounded-md">
+                                <p className="text-xs text-black mb-0.5 opacity-80">Token Number</p>
+                                <p className="text-lg font-bold text-black font-mono">#tok-{order.tokenNumber}</p>
+                                <p className="text-xs text-black opacity-70">Collection number</p>
                               </div>
                             </div>
                           </div>
                         )}
 
-                        {/* Amount Section - Bottom Right */}
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-green-600" />
+                        {/* Amount Section - Compact */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-2">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-xs">
+                            <DollarSign className="w-3 h-3 text-green-600" />
                             Order Summary
                           </h4>
-                          <div className="space-y-3">
+                          <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Subtotal:</span>
-                              <span className="font-semibold text-gray-900">₹{(order.subtotal || 0).toFixed(2)}</span>
+                              <span className="text-xs text-gray-600">Subtotal:</span>
+                              <span className="font-semibold text-gray-900 text-xs">₹{(order.subtotal || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Service Fee:</span>
-                              <span className="font-semibold text-gray-900">₹{(order.serviceFee || 0).toFixed(2)}</span>
+                              <span className="text-xs text-gray-600">Service Fee:</span>
+                              <span className="font-semibold text-gray-900 text-xs">₹{(order.serviceFee || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Discount:</span>
-                              <span className="text-green-600 font-semibold">-₹{(order.discount || 0).toFixed(2)}</span>
+                              <span className="text-xs text-gray-600">Discount:</span>
+                              <span className="text-green-600 font-semibold text-xs">-₹{(order.discount || 0).toFixed(2)}</span>
                             </div>
-                            <div className="border-t border-gray-200 pt-3">
+                            <div className="border-t border-gray-200 pt-1.5">
                               <div className="flex justify-between items-center">
-                                <span className="text-lg font-bold text-gray-900">Total:</span>
-                                <span className="text-2xl font-bold text-gray-900">₹{order.total.toFixed(2)}</span>
+                                <span className="text-sm font-bold text-gray-900">Total:</span>
+                                <span className="text-lg font-bold text-gray-900">₹{order.total.toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Payment Status */}
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                          <h4 className="font-semibold text-gray-900 mb-3">Payment Status</h4>
-                          <div className="flex items-center gap-2 mb-2">
+                        {/* Payment Status - Compact */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-2">
+                          <h4 className="font-semibold text-gray-900 mb-1.5 text-xs">Payment Status</h4>
+                          <div className="flex items-center gap-2 mb-1.5">
                             {getPaymentMethodIcon(order.paymentMethod || 'offline')}
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
                               order.paymentStatus === 'success' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                             }`}>
                               {order.paymentStatus === 'success' ? 'Paid' : (order.paymentStatus || 'Pending')}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 capitalize">{(order.paymentMethod || 'Offline')} payment</p>
+                          <p className="text-xs text-gray-600 capitalize">{(order.paymentMethod || 'Offline')} payment</p>
                         </div>
                       </div>
                     </div>
