@@ -144,18 +144,6 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
                             handlePageChange('dashboard');
                         }}
                     />
-                    {isDashboardOpen && (
-                        <div className="pl-4 border-l-2 border-gray-200 ml-4">
-                            <NavItem 
-                                label="Overview" 
-                                isSubItem 
-                                isActive={currentPage === 'dashboard'}
-                                onClick={() => handlePageChange('dashboard')}
-                            />
-                            <NavItem label="Analytics" isSubItem />
-                            <NavItem label="Reports" isSubItem />
-                        </div>
-                    )}
                     <NavItem 
                         icon={TrendingUp} 
                         label="Sales" 

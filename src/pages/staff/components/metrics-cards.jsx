@@ -8,7 +8,7 @@ const MetricsCards = () => {
       title: 'Total Orders',
       value: '0',
       decimal: '',
-      range: 'Today',
+      range: 'This Month',
       icon: ShoppingCart,
       iconBg: 'bg-yellow-50',
       iconColor: 'text-yellow-500',
@@ -20,7 +20,7 @@ const MetricsCards = () => {
       title: 'Total Revenue',
       value: '₹0',
       decimal: '',
-      range: 'Today',
+      range: 'This Month',
       icon: ArrowUpRight,
       iconBg: 'bg-green-50',
       iconColor: 'text-green-500',
@@ -44,7 +44,7 @@ const MetricsCards = () => {
       title: 'Average Order Value',
       value: '₹0',
       decimal: '',
-      range: 'Today',
+      range: 'This Month',
       icon: ArrowUpRight,
       iconBg: 'bg-purple-50',
       iconColor: 'text-purple-500',
@@ -80,62 +80,72 @@ const MetricsCards = () => {
 
   const fetchMetrics = async () => {
     try {
-      // Get today's date
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Get current month's date range
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
       
-      // Get yesterday's date for comparison
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Start of current month
+      const startOfMonth = new Date(currentYear, currentMonth, 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      // Start of previous month for comparison
+      const startOfPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
+      startOfPreviousMonth.setHours(0, 0, 0, 0);
+      
+      // End of previous month
+      const endOfPreviousMonth = new Date(currentYear, currentMonth, 0);
+      endOfPreviousMonth.setHours(23, 59, 59, 999);
 
-      // Fetch today's transactions
-      const { data: todayData, error: todayError } = await supabase
+      // Fetch current month's transactions
+      const { data: currentMonthData, error: currentMonthError } = await supabase
         .from('transactions')
         .select('*')
         .eq('payment_status', 'success')
-        .gte('created_at', today.toISOString());
+        .gte('created_at', startOfMonth.toISOString());
 
-      if (todayError) throw todayError;
+      if (currentMonthError) throw currentMonthError;
 
-      // Fetch yesterday's transactions
-      const { data: yesterdayData, error: yesterdayError } = await supabase
+      // Fetch previous month's transactions
+      const { data: previousMonthData, error: previousMonthError } = await supabase
         .from('transactions')
         .select('*')
         .eq('payment_status', 'success')
-        .gte('created_at', yesterday.toISOString())
-        .lt('created_at', today.toISOString());
+        .gte('created_at', startOfPreviousMonth.toISOString())
+        .lt('created_at', startOfMonth.toISOString());
 
-      if (yesterdayError) throw yesterdayError;
+      if (previousMonthError) throw previousMonthError;
 
-      // Calculate metrics
-      const todayOrders = todayData?.length || 0;
-      const yesterdayOrders = yesterdayData?.length || 0;
-      const todayRevenue = todayData?.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) || 0;
-      const yesterdayRevenue = yesterdayData?.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) || 0;
+      // Calculate MONTHLY stats instead of daily
+      const currentMonthOrders = currentMonthData?.length || 0;
+      const previousMonthOrders = previousMonthData?.length || 0;
+      const currentMonthRevenue = currentMonthData?.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) || 0;
+      const previousMonthRevenue = previousMonthData?.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) || 0;
       
-      // Calculate active orders (orders with status 'Pending', 'Accepted', 'Preparing')
-      const { data: activeOrdersData } = await supabase
+      // Calculate pending orders for current month
+      const { data: pendingOrdersData } = await supabase
         .from('transactions')
         .select('*')
         .eq('payment_status', 'success')
-        .in('order_status', ['Pending', 'Accepted', 'Preparing']);
+        .in('order_status', ['Pending', 'Accepted', 'Cooking'])
+        .gte('created_at', startOfMonth.toISOString());
 
-      const activeOrders = activeOrdersData?.length || 0;
+      const pendingOrders = pendingOrdersData?.length || 0;
       
-      // Calculate average order value
-      const avgOrderValue = todayOrders > 0 ? todayRevenue / todayOrders : 0;
+      // Calculate average order value for current month
+      const avgOrderValue = currentMonthOrders > 0 ? currentMonthRevenue / currentMonthOrders : 0;
 
-      // Calculate trends
-      const orderTrend = yesterdayOrders > 0 ? ((todayOrders - yesterdayOrders) / yesterdayOrders * 100).toFixed(1) : 0;
-      const revenueTrend = yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue * 100).toFixed(1) : 0;
+      // Calculate monthly trends (comparing current month vs previous month)
+      const orderTrend = previousMonthOrders > 0 ? ((currentMonthOrders - previousMonthOrders) / previousMonthOrders * 100).toFixed(1) : 0;
+      const revenueTrend = previousMonthRevenue > 0 ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue * 100).toFixed(1) : 0;
 
       // Update metrics state
       setMetrics([
         {
           title: 'Total Orders',
-          value: todayOrders.toString(),
+          value: currentMonthOrders.toString(),
           decimal: '',
-          range: 'Today',
+          range: 'This Month',
           icon: ShoppingCart,
           iconBg: 'bg-yellow-50',
           iconColor: 'text-yellow-500',
@@ -145,9 +155,9 @@ const MetricsCards = () => {
         },
         {
           title: 'Total Revenue',
-          value: `₹${todayRevenue.toFixed(0)}`,
+          value: `₹${currentMonthRevenue.toFixed(0)}`,
           decimal: '',
-          range: 'Today',
+          range: 'This Month',
           icon: ArrowUpRight,
           iconBg: 'bg-green-50',
           iconColor: 'text-green-500',
@@ -157,13 +167,13 @@ const MetricsCards = () => {
         },
         {
           title: 'Active Orders',
-          value: activeOrders.toString(),
+          value: pendingOrders.toString(),
           decimal: '',
           range: 'Currently',
           icon: Users,
           iconBg: 'bg-blue-50',
           iconColor: 'text-blue-500',
-          trend: activeOrders.toString(),
+          trend: pendingOrders.toString(),
           trendColor: 'text-blue-500',
           trendIcon: TrendingUp,
         },
@@ -171,7 +181,7 @@ const MetricsCards = () => {
           title: 'Average Order Value',
           value: `₹${avgOrderValue.toFixed(0)}`,
           decimal: '',
-          range: 'Today',
+          range: 'This Month',
           icon: ArrowUpRight,
           iconBg: 'bg-purple-50',
           iconColor: 'text-purple-500',
