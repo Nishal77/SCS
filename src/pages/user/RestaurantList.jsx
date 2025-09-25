@@ -107,13 +107,13 @@ const useInventoryData = () => {
 // --- Filter Bar Component ---
 const FilterBar = ({ activeFilter, setActiveFilter }) => {
     const filters = [
-        { id: 'all', label: 'All', icon: '🍽️' },
-        { id: 'special_items', label: 'Special Items', icon: '⭐' },
-        { id: 'combo_pack', label: 'Combo Pack', icon: '🍱' },
-        { id: 'juice', label: 'Juice', icon: '🍹' },
-        { id: 'milk_shake', label: 'Milk Shake', icon: '🥛' },
-        { id: 'icecreams', label: 'Icecreams', icon: '🍦' },
-        { id: 'chat_items', label: 'Chat Items', icon: '🍲' },
+        { id: 'all', label: 'All' },
+        { id: 'special_items', label: 'Special Items' },
+        { id: 'combo_pack', label: 'Combo Pack' },
+        { id: 'juice', label: 'Juice' },
+        { id: 'milk_shake', label: 'Milk Shake' },
+        { id: 'icecreams', label: 'Icecreams' },
+        { id: 'chat_items', label: 'Chat Items' },
     ];
 
     return (
@@ -130,13 +130,6 @@ const FilterBar = ({ activeFilter, setActiveFilter }) => {
                                 : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm hover:shadow-md'
                         }`}
                     >
-                        {categoryImage && (
-                            <img 
-                                src={categoryImage} 
-                                alt={filter.label}
-                                className="w-4 h-4 rounded-full object-cover border border-gray-200"
-                            />
-                        )}
                         <span className="text-sm">{filter.icon}</span>
                         <span>{filter.label}</span>
                     </button>
@@ -163,13 +156,13 @@ const RestaurantCard = ({ restaurant }) => {
         try {
             const result = await handleAddToCart(restaurant.id, 1);
             if (result.success) {
-                setCartMessage('✅ Added to cart successfully!');
+                setCartMessage('Added to cart successfully!');
                 // Refresh cart data globally
                 refreshCart();
                 // Clear message after 2 seconds
                 setTimeout(() => setCartMessage(''), 2000);
             } else {
-                setCartMessage(`❌ ${result.error}`);
+                setCartMessage(`${result.error}`);
                 if (result.error.includes('stock') || result.error.includes('Stock')) {
                     // Refresh page to get updated stock data
                     setTimeout(() => window.location.reload(), 2000);
@@ -179,7 +172,7 @@ const RestaurantCard = ({ restaurant }) => {
                 }
             }
         } catch (error) {
-            setCartMessage('❌ Failed to add to cart');
+            setCartMessage('Failed to add to cart');
             setTimeout(() => setCartMessage(''), 3000);
         } finally {
             setAddingToCart(false);
@@ -200,7 +193,7 @@ const RestaurantCard = ({ restaurant }) => {
                         stockStatus.canOrder ? 'group-hover:scale-105' : ''
                     }`}
                     onError={(e) => { 
-                        console.log(`❌ Image failed to load for ${restaurant.name}:`, restaurant.image);
+                        console.log(`Image failed to load for ${restaurant.name}:`, restaurant.image);
                         // Try to load a fallback image
                         if (!e.target.dataset.fallbackAttempted) {
                             e.target.dataset.fallbackAttempted = 'true';

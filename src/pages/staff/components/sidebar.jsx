@@ -6,7 +6,6 @@ import {
     LayoutDashboard, Utensils, ShoppingCart, Users, MessageSquare, Settings2, LogOut,
     BadgeCheck, Bell, CreditCard, Sparkles, BarChart3, TrendingUp
 } from 'lucide-react';
-import IndianClock from './IndianClock';
 
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -125,7 +124,6 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
             <div className="flex items-center justify-between p-3 border-b border-gray-200">
                 <CompanyProfile />
                 <div className="flex items-center gap-2">
-                    <IndianClock />
                     <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-800">
                         <X size={20} />
                     </button>
@@ -173,23 +171,8 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
                             />
                         </div>
                     )}
-                    <NavItem 
-                        icon={ShoppingCart} 
-                        label="Orders" 
-                        isCollapsible 
-                        isOpen={isOrdersOpen}
-                        onClick={() => setIsOrdersOpen(!isOrdersOpen)}
-                    />
-                    {isOrdersOpen && (
-                        <div className="pl-4 border-l-2 border-gray-200 ml-4">
-                            <NavItem label="New Orders" isSubItem />
-                            <NavItem label="In Progress" isSubItem />
-                            <NavItem label="Completed" isSubItem />
-                        </div>
-                    )}
-                    <NavItem icon={Users} label="Customers" hasSubmenu />
-                    <NavItem icon={MessageSquare} label="Chat Support" hasSubmenu />
-                    <NavItem icon={Settings2} label="Settings" hasSubmenu />
+        
+                
                 </NavSection>
 
                 <NavSection title="Quick Actions">
@@ -199,8 +182,6 @@ const Sidebar = ({ isOpen, setIsOpen, onDropdownToggle, currentPage, onPageChang
                         isActive={currentPage === 'inventory'}
                         onClick={() => handlePageChange('inventory')}
                     />
-                    <NavItem icon={BookOpen} label="Reports" />
-                    <NavItem icon={MoreHorizontal} label="More" />
                 </NavSection>
             </div>
             <UserProfile onDropdownToggle={onDropdownToggle} />
